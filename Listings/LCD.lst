@@ -1,0 +1,354 @@
+C51 COMPILER V9.60.0.0   LCD                                                               08/24/2022 00:26:27 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE LCD
+OBJECT MODULE PLACED IN .\Objects\LCD.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE LCD.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings
+                    -\LCD.lst) TABS(2) OBJECT(.\Objects\LCD.obj)
+
+line level    source
+
+   1          #include "reg552.h"
+   2          #include "Delay.h"
+   3          #include "airlabbrm-willem.h"
+   4          
+   5          #define LCD_E_Wait          30
+   6          
+   7          void SetupLCD()
+   8          {
+   9   1        unsigned char TimeOut = 0x0f;
+  10   1      
+  11   1        // Wait minimal 15 ms
+  12   1        Delay(15);
+  13   1      
+  14   1        LCD_E = 0;
+  15   1        // Setup/Reset Display
+  16   1        LCD_RS = 0;
+  17   1        LCD_RW = 0;
+  18   1        LCD_D7 = 0;
+  19   1        LCD_D6 = 0;
+  20   1        LCD_D5 = 1;
+  21   1        LCD_D4 = 1;
+  22   1        LCD_E = 1;
+  23   1        for (Wait=0; Wait<LCD_E_Wait; Wait++);
+  24   1        LCD_E = 0;
+  25   1        // Wait minimal 4.1 ms
+  26   1        Delay(1);
+  27   1      
+  28   1        // Setup/Reset Display
+  29   1        LCD_RS = 0;
+  30   1        LCD_RW = 0;
+  31   1        LCD_D7 = 0;
+  32   1        LCD_D6 = 0;
+  33   1        LCD_D5 = 1;
+  34   1        LCD_D4 = 1;
+  35   1        LCD_E = 1;
+  36   1        for (Wait=0; Wait<LCD_E_Wait; Wait++);
+  37   1        LCD_E = 0;
+  38   1        // Wait minimal 100 us
+  39   1        Delay(1);
+  40   1      
+  41   1        // Setup/Reset Display
+  42   1        LCD_RS = 0;
+  43   1        LCD_RW = 0;
+  44   1        LCD_D7 = 0;
+  45   1        LCD_D6 = 0;
+  46   1        LCD_D5 = 1;
+  47   1        LCD_D4 = 1;
+  48   1        LCD_E = 1;
+  49   1        for (Wait=0; Wait<LCD_E_Wait; Wait++);
+  50   1        LCD_E = 0;
+  51   1      
+  52   1        // Busy cannot be checked
+  53   1        Delay(1);
+  54   1      
+C51 COMPILER V9.60.0.0   LCD                                                               08/24/2022 00:26:27 PAGE 2   
+
+  55   1        // Setup/Reset Display to 4 bit mode
+  56   1        LCD_RS = 0;
+  57   1        LCD_RW = 0;
+  58   1        LCD_D7 = 0;
+  59   1        LCD_D6 = 0;
+  60   1        LCD_D5 = 1;
+  61   1        LCD_D4 = 0;
+  62   1        LCD_E = 1;
+  63   1        for (Wait=0; Wait<LCD_E_Wait; Wait++);
+  64   1        LCD_E = 0;
+  65   1      
+  66   1        Delay(1);
+  67   1      
+  68   1        // Set number of lines etc...
+  69   1        LCD_RS = 0;
+  70   1        LCD_RW = 0;
+  71   1        LCD_D7 = 0;   // Function set
+  72   1        LCD_D6 = 0;   // Function set
+  73   1        LCD_D5 = 1;   // Function set
+  74   1        LCD_D4 = 0;   // 4 bit
+  75   1        LCD_E = 1;
+  76   1        for (Wait=0; Wait<LCD_E_Wait; Wait++);
+  77   1        LCD_E = 0;
+  78   1      
+  79   1        LCD_RS = 0;
+  80   1        LCD_RW = 0;
+  81   1        LCD_D7 = 1;   // 2 lines
+  82   1        LCD_D6 = 0;   // 5x7 dots chars
+  83   1        LCD_D5 = 0;   // *
+  84   1        LCD_D4 = 0;   // *
+  85   1        LCD_E = 1;
+  86   1        for (Wait=0; Wait<LCD_E_Wait; Wait++);
+  87   1        LCD_E = 0;
+  88   1      
+  89   1        TimeOut = 0x0F;
+  90   1        LCD_D7 = 1;
+  91   1        LCD_RS = 0;
+  92   1        LCD_RW = 1;
+  93   1        LCD_E = 1;
+  94   1        for (Wait=0; Wait<LCD_E_Wait; Wait++);
+  95   1        LCD_E = 0;
+  96   1        LCD_E = 1;
+  97   1        while ((LCD_D7) && (TimeOut--))
+  98   1        {
+  99   2          LCD_E = 0;
+ 100   2          for (Wait=0; Wait<LCD_E_Wait; Wait++);
+ 101   2          LCD_E = 1;
+ 102   2        }
+ 103   1        LCD_E = 0;
+ 104   1      
+ 105   1        // Display Off
+ 106   1        LCD_RS = 0;
+ 107   1        LCD_RW = 0;
+ 108   1        LCD_D7 = 0;   // Function set
+ 109   1        LCD_D6 = 0;   // Function set
+ 110   1        LCD_D5 = 0;   // Function set
+ 111   1        LCD_D4 = 0;   
+ 112   1        LCD_E = 1;
+ 113   1        for (Wait=0; Wait<LCD_E_Wait; Wait++);
+ 114   1        LCD_E = 0;
+ 115   1      
+ 116   1        LCD_RS = 0;
+C51 COMPILER V9.60.0.0   LCD                                                               08/24/2022 00:26:27 PAGE 3   
+
+ 117   1        LCD_RW = 0;
+ 118   1        LCD_D7 = 1;   // Display off
+ 119   1        LCD_D6 = 1;   
+ 120   1        LCD_D5 = 0;   // Cursor on
+ 121   1        LCD_D4 = 0;   // Cursor Blink
+ 122   1        LCD_E = 1;
+ 123   1        for (Wait=0; Wait<LCD_E_Wait; Wait++);
+ 124   1        LCD_E = 0;
+ 125   1      
+ 126   1        TimeOut = 0x0F;
+ 127   1        LCD_D7 = 1;
+ 128   1        LCD_RS = 0;
+ 129   1        LCD_RW = 1;
+ 130   1        LCD_E = 1;
+ 131   1        for (Wait=0; Wait<LCD_E_Wait; Wait++);
+ 132   1        LCD_E = 0;
+ 133   1        LCD_E = 1;
+ 134   1        while ((LCD_D7) && (TimeOut--))
+ 135   1        {
+ 136   2          LCD_E = 0;
+ 137   2          for (Wait=0; Wait<LCD_E_Wait; Wait++);
+ 138   2          LCD_E = 1;
+ 139   2        }
+ 140   1        LCD_E = 0;
+ 141   1      
+ 142   1        // Display Clear
+ 143   1        LCD_RS = 0;
+ 144   1        LCD_RW = 0;
+ 145   1        LCD_D7 = 0;   // Function set
+ 146   1        LCD_D6 = 0;   // Function set
+ 147   1        LCD_D5 = 0;   // Function set
+ 148   1        LCD_D4 = 0;   
+ 149   1        LCD_E = 1;
+ 150   1        for (Wait=0; Wait<LCD_E_Wait; Wait++);
+ 151   1        LCD_E = 0;
+ 152   1      
+ 153   1        LCD_RS = 0;
+ 154   1        LCD_RW = 0;
+ 155   1        LCD_D7 = 0;   
+ 156   1        LCD_D6 = 0;   
+ 157   1        LCD_D5 = 0;  
+ 158   1        LCD_D4 = 1;   
+ 159   1        LCD_E = 1;
+ 160   1        for (Wait=0; Wait<LCD_E_Wait; Wait++);
+ 161   1        LCD_E = 0;
+ 162   1      
+ 163   1        TimeOut = 0x0F;
+ 164   1        LCD_D7 = 1;
+ 165   1        LCD_RS = 0;
+ 166   1        LCD_RW = 1;
+ 167   1        LCD_E = 1;
+ 168   1        for (Wait=0; Wait<LCD_E_Wait; Wait++);
+ 169   1        LCD_E = 0;
+ 170   1        LCD_E = 1;
+ 171   1        while ((LCD_D7) && (TimeOut--))
+ 172   1        {
+ 173   2          LCD_E = 0;
+ 174   2          for (Wait=0; Wait<LCD_E_Wait; Wait++);
+ 175   2          LCD_E = 1;
+ 176   2        }
+ 177   1        LCD_E = 0;
+ 178   1      
+C51 COMPILER V9.60.0.0   LCD                                                               08/24/2022 00:26:27 PAGE 4   
+
+ 179   1        // Entry mode
+ 180   1        LCD_RS = 0;
+ 181   1        LCD_RW = 0;
+ 182   1        LCD_D7 = 0;
+ 183   1        LCD_D6 = 0;
+ 184   1        LCD_D5 = 0;
+ 185   1        LCD_D4 = 0;   
+ 186   1        LCD_E = 1;
+ 187   1        for (Wait=0; Wait<LCD_E_Wait; Wait++);
+ 188   1        LCD_E = 0;
+ 189   1      
+ 190   1        LCD_RS = 0;
+ 191   1        LCD_RW = 0;
+ 192   1        LCD_D7 = 0;   
+ 193   1        LCD_D6 = 1;
+ 194   1        LCD_D5 = 1;   // Position increment after char
+ 195   1        LCD_D4 = 0;   // No shift
+ 196   1        LCD_E = 1;
+ 197   1        for (Wait=0; Wait<LCD_E_Wait; Wait++);
+ 198   1        LCD_E = 0;
+ 199   1      
+ 200   1        TimeOut = 0x0F;
+ 201   1        LCD_D7 = 1;
+ 202   1        LCD_RS = 0;
+ 203   1        LCD_RW = 1;
+ 204   1        LCD_E = 1;
+ 205   1        while ((LCD_D7) && (TimeOut--))
+ 206   1        {
+ 207   2          LCD_E = 0;
+ 208   2          for (Wait=0; Wait<LCD_E_Wait; Wait++);
+ 209   2          LCD_E = 1;
+ 210   2        }
+ 211   1        LCD_E = 0;
+ 212   1      
+ 213   1      
+ 214   1        // Display on
+ 215   1      /*  LCD_RS = 0;
+ 216   1        LCD_RW = 0;
+ 217   1        LCD_D7 = 0;
+ 218   1        LCD_D6 = 0;
+ 219   1        LCD_D5 = 0;
+ 220   1        LCD_D4 = 0;   
+ 221   1        LCD_E = 1;
+ 222   1        LCD_E = 0;
+ 223   1      
+ 224   1        LCD_RS = 0;
+ 225   1        LCD_RW = 0;
+ 226   1        LCD_D7 = 1;   
+ 227   1        LCD_D6 = 1;
+ 228   1        LCD_D5 = 1;
+ 229   1        LCD_D4 = 1;
+ 230   1        LCD_E = 1;
+ 231   1        LCD_E = 0;
+ 232   1      
+ 233   1        TimeOut = 0x0F;
+ 234   1        LCD_D7 = 1;
+ 235   1        LCD_RS = 0;
+ 236   1        LCD_RW = 1;
+ 237   1        LCD_E = 1;
+ 238   1        LCD_E = 0;
+ 239   1        while ((LCD_D7) && (TimeOut--))
+ 240   1        {
+C51 COMPILER V9.60.0.0   LCD                                                               08/24/2022 00:26:27 PAGE 5   
+
+ 241   1          LCD_E = 1;
+ 242   1          LCD_E = 0;
+ 243   1        }*/
+ 244   1      }
+ 245          
+ 246          /****************************************
+ 247          * place data on LCD RS = 0: Instruction *
+ 248          *                   RS = 1: Data        *
+ 249          ****************************************/
+ 250          void SetLCD(unsigned char RS, char *Buffer)
+ 251          {
+ 252   1        unsigned char TimeOut = 0x0F;
+ 253   1        unsigned char cntBuffer = 0;
+ 254   1      
+ 255   1        LCD_E = 0;
+ 256   1        for (Wait=0; Wait<LCD_E_Wait; Wait++);
+ 257   1      
+ 258   1        while (Buffer[cntBuffer] != 0)
+ 259   1        {
+ 260   2          // Entry mode
+ 261   2          LCD_RS = RS;
+ 262   2          LCD_RW = 0;
+ 263   2          LCD_D7 = (unsigned char)Buffer[cntBuffer]&0x80;
+ 264   2          LCD_D6 = (unsigned char)Buffer[cntBuffer]&0x40;
+ 265   2          LCD_D5 = (unsigned char)Buffer[cntBuffer]&0x20;
+ 266   2          LCD_D4 = (unsigned char)Buffer[cntBuffer]&0x10;   
+ 267   2          LCD_E = 1;
+ 268   2          for (Wait=0; Wait<LCD_E_Wait; Wait++);
+ 269   2          LCD_E = 0;
+ 270   2      
+ 271   2          TimeOut = 0x0F;
+ 272   2          LCD_D7 = 1;
+ 273   2          LCD_RS = 0;
+ 274   2          LCD_RW = 1;
+ 275   2          LCD_E = 1;
+ 276   2          for (Wait=0; Wait<LCD_E_Wait; Wait++);
+ 277   2          LCD_E = 0;
+ 278   2      
+ 279   2          LCD_E = 1;
+ 280   2          while ((LCD_D7) && (TimeOut--))
+ 281   2          {
+ 282   3            LCD_E = 0;
+ 283   3            for (Wait=0; Wait<LCD_E_Wait; Wait++);
+ 284   3            LCD_E = 1;
+ 285   3          }
+ 286   2          LCD_E = 0;
+ 287   2      
+ 288   2          LCD_RS = RS;
+ 289   2          LCD_RW = 0;
+ 290   2          LCD_D7 = (unsigned char)Buffer[cntBuffer]&0x08;
+ 291   2          LCD_D6 = (unsigned char)Buffer[cntBuffer]&0x04;
+ 292   2          LCD_D5 = (unsigned char)Buffer[cntBuffer]&0x02;
+ 293   2          LCD_D4 = (unsigned char)Buffer[cntBuffer]&0x01;   
+ 294   2          LCD_E = 1;
+ 295   2          for (Wait=0; Wait<LCD_E_Wait; Wait++);
+ 296   2          LCD_E = 0;
+ 297   2      
+ 298   2          TimeOut = 0x0F;
+ 299   2          LCD_D7 = 1;
+ 300   2          LCD_RS = 0;
+ 301   2          LCD_RW = 1;
+ 302   2          LCD_E = 1;
+C51 COMPILER V9.60.0.0   LCD                                                               08/24/2022 00:26:27 PAGE 6   
+
+ 303   2          for (Wait=0; Wait<LCD_E_Wait; Wait++);
+ 304   2          LCD_E = 0;
+ 305   2      
+ 306   2          LCD_E = 1;
+ 307   2          while ((LCD_D7) && (TimeOut--))
+ 308   2          {
+ 309   3            LCD_E = 0;
+ 310   3            for (Wait=0; Wait<LCD_E_Wait; Wait++);
+ 311   3            LCD_E = 1;
+ 312   3          }
+ 313   2          LCD_E = 0;
+ 314   2      
+ 315   2          cntBuffer++;
+ 316   2        }
+ 317   1      }
+ 318          
+ 319          
+ 320          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1196    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----       6
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

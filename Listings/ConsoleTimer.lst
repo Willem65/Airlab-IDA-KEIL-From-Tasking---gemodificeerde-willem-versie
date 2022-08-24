@@ -1,0 +1,87 @@
+C51 COMPILER V9.60.0.0   CONSOLETIMER                                                      08/24/2022 00:26:28 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE CONSOLETIMER
+OBJECT MODULE PLACED IN .\Objects\ConsoleTimer.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE ConsoleTimer.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.
+                    -\Listings\ConsoleTimer.lst) TABS(2) OBJECT(.\Objects\ConsoleTimer.obj)
+
+line level    source
+
+   1          
+   2          #include "reg552.h"
+   3          #include "ConsoleTimer.h"
+   4          
+   5          unsigned char GlobalTimerActive;
+   6          unsigned char Count;
+   7          
+   8          struct TimeAndDateStruct OldTimeAndDate, TimeAndDate;
+   9          
+  10          
+  11          void SetupTimer0()
+  12          {
+  13   1         // Timer 0; 16 bits counter
+  14   1         TMOD = (TMOD & 0xF0) | 0x01;
+  15   1         
+  16   1         TH0  = 0xDB; /* set prescaler timer0         */
+  17   1         TL0  = 0xFF; /* 11059200/12 tick per second  */
+  18   1                      /* = 0x2400;  count to 100;     */
+  19   1                      /* 0xFFFF-0x2400 = DBFF         */
+  20   1         PT0  = 0;    /* low priority             */
+  21   1         ET0  = 1;    /* enable int. timer0       */
+  22   1         TR0  = 1;
+  23   1      }
+  24          
+  25          
+  26          
+  27          void Timer0(void) interrupt 1 using 1 
+  28          {
+  29   1         TH0  = 0xDB; /* set prescaler timer0         */
+  30   1         TL0  = 0xFF; /* 11059200/12 tick per second  */
+  31   1                      /* = 0x2400;  count to 100;     */
+  32   1                      /* 0xFFFF-0x2400 = DBFF         */
+  33   1      
+  34   1         Count++;
+  35   1         if (Count>9) //Was before 10.
+  36   1           Count = 0;
+  37   1      
+  38   1         if ((Count==0x00) && (GlobalTimerActive))
+  39   1         {
+  40   2            TimeAndDate.Frames+=10;
+  41   2            if (TimeAndDate.Frames>90)
+  42   2            {
+  43   3              TimeAndDate.Frames = 0;
+  44   3              TimeAndDate.Seconds++;
+  45   3              if (TimeAndDate.Seconds>59)
+  46   3              {
+  47   4                TimeAndDate.Seconds = 0;
+  48   4                TimeAndDate.Minutes++;
+  49   4                if (TimeAndDate.Minutes>59)
+  50   4                {
+  51   5                  TimeAndDate.Minutes = 0;
+  52   5                  TimeAndDate.Hours++;
+  53   5                  if (TimeAndDate.Hours>23)
+  54   5                  {
+C51 COMPILER V9.60.0.0   CONSOLETIMER                                                      08/24/2022 00:26:28 PAGE 2   
+
+  55   6                    TimeAndDate.Hours = 0;
+  56   6                  }
+  57   5                }
+  58   4              }
+  59   3           }
+  60   2        }
+  61   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    141    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     10    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

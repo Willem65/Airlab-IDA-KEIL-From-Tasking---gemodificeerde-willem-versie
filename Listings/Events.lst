@@ -1,0 +1,1826 @@
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE EVENTS
+OBJECT MODULE PLACED IN .\Objects\Events.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Events.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listi
+                    -ngs\Events.lst) TABS(2) OBJECT(.\Objects\Events.obj)
+
+line level    source
+
+   1          #include "reg552.h"
+   2          #include "airlabbrm-willem.h"
+   3          #include "LCD.h"
+   4          #include "Delay.h"
+   5          #include "RS232.h"
+   6          #include "I2C.h"
+   7          #include "ReadModules.h"
+   8          #include "ConsoleTimer.h"
+   9          
+  10          void DoEvent(unsigned int Event)
+  11          {
+  12   1        unsigned char EventType = (Event&0x87);
+  13   1        unsigned char Module = (Event>>3)&0x0F;
+  14   1        unsigned char EventOn = !(Event&0x100);
+  15   1        
+  16   1        if ((Event&0x287) == EXT_MUTE)
+  17   1        {
+  18   2          EventType = MUTE;
+  19   2        }
+  20   1      
+  21   1        switch (EventType)
+  22   1        {
+  23   2          case EXTERNREMOTEIN:
+  24   2          {
+  25   3            if (OperatingMode != MODULEMODE)
+  26   3            {
+  27   4              switch (ModuleType[Module])
+  28   4              {
+  29   5                case TRIPLE:
+  30   5                { // TRIPLE
+  31   6                  if (EventOn)
+  32   6                  {
+  33   7                    if ((ModuleData[Module][MIC_RING]&0x80) && (ConsoleModuleSettings[Module][REMMIC]))
+  34   7                    {
+  35   8                      ConsoleFunctionData[Module] |= CUE_LED;
+  36   8                      ConsoleFunctionData[Module] |= CUE_FUNCTION;
+  37   8        
+  38   8                      //DJ-Control
+  39   8                      DJControl();
+  40   8        
+  41   8                      ConsoleFunctionData[16] &= ANNOUNCER_COMM_FUNCTION_LED^0xFF;
+  42   8                      if (ConsoleFunctionData[Module]&REMOTE_FUNCTION)
+  43   8                        ConsoleFunctionData[Module]|=MUTE_FUNCTION;
+  44   8                      else if ((ModuleData[Module][MIC_RING]&0x80) && (ConsoleModuleSettings[Module][ANNMIC]) && (Consol
+             -eFunctionData[Module]&MUTE_FUNCTION) && (ConsoleMasterSettings[AUTOCOM]))
+  45   8                      {
+  46   9                        ConsoleFunctionData[16] |= ANNOUNCER_COMM_FUNCTION_LED;
+  47   9                      }
+  48   8      
+  49   8                      CUEByRemoteMIC[Module] = 1;
+  50   8                      CheckCUEByRemoteMIC();
+  51   8                      CheckTBMic();
+  52   8                      SendSerialData = 1;
+  53   8                    }
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 2   
+
+  54   7                    else if ((!(ModuleData[Module][LINEB]&0x80)) && (ConsoleModuleSettings[Module][REMLINEA]))
+  55   7                    {
+  56   8                      ConsoleFunctionData[Module] |= CUE_LED;
+  57   8                      ConsoleFunctionData[Module] |= CUE_FUNCTION;
+  58   8      
+  59   8                      //DJ-Control
+  60   8                      DJControl();
+  61   8      
+  62   8                      if (ConsoleModuleSettings[Module][MICATLINEA])
+  63   8                      {
+  64   9                        ConsoleFunctionData[16] &= ANNOUNCER_COMM_FUNCTION_LED^0xFF;
+  65   9                        if (ConsoleFunctionData[Module]&REMOTE_FUNCTION)
+  66   9                          ConsoleFunctionData[Module]|=MUTE_FUNCTION;
+  67   9                        if ((!(ModuleData[Module][LINEB]&0x80)) && (ConsoleModuleSettings[Module][ANNMIC]) && (ConsoleFun
+             -ctionData[Module]&MUTE_FUNCTION) && (ConsoleMasterSettings[AUTOCOM]))
+  68   9                        {
+  69  10                            ConsoleFunctionData[16] |= ANNOUNCER_COMM_FUNCTION_LED;
+  70  10                        }
+  71   9                        CheckTBMic();
+  72   9                        SendSerialData = 1;
+  73   9                      }
+  74   8                    }
+  75   7                    else if ((ModuleData[Module][LINEB]&0x80) && (ConsoleModuleSettings[Module][REMLINEB]))
+  76   7                    {
+  77   8                      ConsoleFunctionData[Module] |= CUE_LED;
+  78   8                      ConsoleFunctionData[Module] |= CUE_FUNCTION;
+  79   8      
+  80   8                      //DJ-Control
+  81   8                      DJControl();
+  82   8      
+  83   8                      if (ConsoleModuleSettings[Module][MICATLINEB])
+  84   8                      {
+  85   9                        ConsoleFunctionData[16] &= ANNOUNCER_COMM_FUNCTION_LED^0xFF;
+  86   9                        if (ConsoleFunctionData[Module]&REMOTE_FUNCTION)
+  87   9                          ConsoleFunctionData[Module]|=MUTE_FUNCTION;
+  88   9                        if ((ModuleData[Module][LINEB]&0x80) && (ConsoleModuleSettings[Module][ANNMIC]) && (ConsoleFuncti
+             -onData[Module]&MUTE_FUNCTION) && (ConsoleMasterSettings[AUTOCOM]))
+  89   9                        {
+  90  10                            ConsoleFunctionData[16] |= ANNOUNCER_COMM_FUNCTION_LED;
+  91  10                        }
+  92   9                        CheckTBMic();
+  93   9                        SendSerialData = 1;
+  94   9                      }
+  95   8                    }
+  96   7      
+  97   7                    // REMOTE ON
+  98   7                    if ((ModuleData[Module][MIC_RING]&0x80) && (ConsoleModuleSettings[Module][REMONMIC]))
+  99   7                    {
+ 100   8                      EventBuffer[EventBufferPtrTop++] = (Module<<3) | ON;
+ 101   8                    }
+ 102   7                    else if ((!(ModuleData[Module][LINEB]&0x80)) && (ConsoleModuleSettings[Module][REMONLINEA]) && (!(M
+             -oduleData[Module][MIC_RING]&0x80)))
+ 103   7                    {
+ 104   8                      EventBuffer[EventBufferPtrTop++] = (Module<<3) | ON;
+ 105   8                    }
+ 106   7                    else if ((ModuleData[Module][LINEB]&0x80) && (ConsoleModuleSettings[Module][REMONLINEB]) && (!(Modu
+             -leData[Module][MIC_RING]&0x80)))
+ 107   7                    {
+ 108   8                      EventBuffer[EventBufferPtrTop++] = (Module<<3) | ON;
+ 109   8                    }
+ 110   7      
+ 111   7                    //Cue-Control
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 3   
+
+ 112   7                    CueControl();
+ 113   7                  }
+ 114   6                  else
+ 115   6                  {
+ 116   7                    if ((ModuleData[Module][MIC_RING]&0x80) && (ConsoleModuleSettings[Module][REMMIC]))
+ 117   7                    {
+ 118   8                      ConsoleFunctionData[Module] &= CUE_LED^0xFF;
+ 119   8                      ConsoleFunctionData[Module] &= CUE_FUNCTION^0xFF;
+ 120   8                      if ((ConsoleFunctionData[Module]&ON_LED) && ((ModuleData[Module][FADERON]&0x80)))
+ 121   8                        ConsoleFunctionData[Module]&=MUTE_FUNCTION^0xFF;  // !JB
+ 122   8      
+ 123   8                      CUEByRemoteMIC[Module] = 0;
+ 124   8                      CheckCUEByRemoteMIC();
+ 125   8      
+ 126   8                      SendSerialData = 1;
+ 127   8      
+ 128   8                    }
+ 129   7                    else if ((!(ModuleData[Module][LINEB]&0x80)) && (ConsoleModuleSettings[Module][REMLINEA]))
+ 130   7                    {
+ 131   8                      ConsoleFunctionData[Module] &= CUE_LED^0xFF;
+ 132   8                      ConsoleFunctionData[Module] &= CUE_FUNCTION^0xFF;
+ 133   8                      if ((ConsoleFunctionData[Module]&ON_LED) && ((ModuleData[Module][FADERON]&0x80)))
+ 134   8                        ConsoleFunctionData[Module]&=MUTE_FUNCTION^0xFF;  // !JB
+ 135   8      
+ 136   8                      SendSerialData = 1;
+ 137   8                    }
+ 138   7                    else if ((ModuleData[Module][LINEB]&0x80) && (ConsoleModuleSettings[Module][REMLINEB]))
+ 139   7                    {
+ 140   8                      ConsoleFunctionData[Module] &= CUE_LED^0xFF;
+ 141   8                      ConsoleFunctionData[Module] &= CUE_FUNCTION^0xFF;
+ 142   8                      if ((ConsoleFunctionData[Module]&ON_LED) && ((ModuleData[Module][FADERON]&0x80)))
+ 143   8                        ConsoleFunctionData[Module]&=MUTE_FUNCTION^0xFF;  // !JB
+ 144   8      
+ 145   8                      SendSerialData = 1;
+ 146   8                    }
+ 147   7      
+ 148   7                    //DJ-Control
+ 149   7                    DJControl();
+ 150   7      
+ 151   7                    //Cue-Control
+ 152   7                    CueControl();
+ 153   7                  }
+ 154   6                }
+ 155   5                break;
+ 156   5                case TELCO:
+ 157   5                { // TELCO
+ 158   6                  if (EventOn)
+ 159   6                  {
+ 160   7                    if ((!(ModuleData[Module][LINEB]&0x80)) && (ConsoleModuleSettings[Module][REMLINEA]))
+ 161   7                    {
+ 162   8                      EventBuffer[EventBufferPtrTop++] = (Module<<3) | PFL;
+ 163   8                    }
+ 164   7                    else if ((ModuleData[Module][LINEB]&0x80) && (ConsoleModuleSettings[Module][REMLINEB]))
+ 165   7                    {
+ 166   8                      EventBuffer[EventBufferPtrTop++] = (Module<<3) | PFL;
+ 167   8                    }
+ 168   7                    else if ((ModuleData[Module][MIC_RING]&0x80) && (ConsoleModuleSettings[Module][REMMIC]))
+ 169   7                    {
+ 170   8                      ConsoleFunctionData[Module] |= CUE_LED;
+ 171   8                      ConsoleFunctionData[Module] |= CUE_FUNCTION;
+ 172   8                      if (!(ConsoleFunctionData[Module]&REMOTE_FUNCTION))
+ 173   8                        ConsoleFunctionData[Module]|=MUTE_FUNCTION;
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 4   
+
+ 174   8                      SendSerialData = 1;
+ 175   8                    }
+ 176   7                    //Cue-Control
+ 177   7                    CueControl();
+ 178   7                  }
+ 179   6                  else
+ 180   6                  {
+ 181   7                    if ((ModuleData[Module][MIC_RING]&0x80) && (ConsoleModuleSettings[Module][REMMIC]) && (ConsoleFunct
+             -ionData[Module]&REMOTE_FUNCTION))
+ 182   7                    {
+ 183   8                      ConsoleFunctionData[Module] &= CUE_LED^0xFF;
+ 184   8                      ConsoleFunctionData[Module] &= CUE_FUNCTION^0xFF;
+ 185   8                      ConsoleFunctionData[Module] &= MUTE_FUNCTION^0xFF;
+ 186   8                      SendSerialData = 1;
+ 187   8                    }
+ 188   7                    //Cue-Control
+ 189   7                    CueControl();
+ 190   7                  }
+ 191   6                }
+ 192   5                break;
+ 193   5              }
+ 194   4            }
+ 195   3          }
+ 196   2          break;
+ 197   2          case FADERON:
+ 198   2          {
+ 199   3            switch (ModuleType[Module])
+ 200   3            {
+ 201   4              case TRIPLE:
+ 202   4              { //Triple
+ 203   5                if (EventOn)
+ 204   5                {   // Was eerst het OfEvent JB
+ 205   6                    // Inverse reaction bij op P-print by Jan Betten!! 
+ 206   6                    // dus onevent is fader uit bij P-print!!!!
+ 207   6      
+ 208   6                  if (ConsoleFunctionData[Module]&ON_LED)
+ 209   6                  {
+ 210   7                    ConsoleFunctionData[Module] |= REMOTE_FUNCTION;
+ 211   7      
+ 212   7                    //OnAir1/2 Control
+ 213   7                    OnAirControl();
+ 214   7      
+ 215   7                    TimerControl(Module);
+ 216   7      
+ 217   7                    ConsoleFunctionData[Module] &= CUE_LED^0xFF;
+ 218   7                    ConsoleFunctionData[Module] &= CUE_FUNCTION^0xFF;
+ 219   7      
+ 220   7                    //Cue-Control
+ 221   7                    if (ConsoleMasterSettings[AUTOCUERESET])
+ 222   7                    {
+ 223   8                      if (((ModuleData[Module][FADERON]&0x80)) && ((ConsoleFunctionData[Module]&ON_LED)))
+ 224   8                      {  // !JB
+ 225   9                        unsigned char cntModule;
+ 226   9                        for (cntModule=0; cntModule<NROFMODULES; cntModule++)
+ 227   9                        {
+ 228  10                          ConsoleFunctionData[cntModule] &= CUE_LED^0xFF;
+ 229  10                          ConsoleFunctionData[cntModule] &= CUE_FUNCTION^0xFF;
+ 230  10                        }
+ 231   9                      }
+ 232   8                    }
+ 233   7                    CueControl();
+ 234   7      
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 5   
+
+ 235   7                    //DJ-Control
+ 236   7                    DJControl();
+ 237   7                    //StudioMic Control
+ 238   7                    StudioMicControl();
+ 239   7      
+ 240   7                    CheckStartCondition(Module);
+ 241   7      
+ 242   7                    ConsoleFunctionData[Module] &= MUTE_FUNCTION^0xFF;
+ 243   7                    SendSerialData = 1;
+ 244   7                  }
+ 245   6                  else
+ 246   6                  {
+ 247   7                    if ((ConsoleModuleSettings[Module][STARTFADER]) && (!ConsoleModuleSettings[Module][STARTON]))
+ 248   7                    {
+ 249   8                      CheckStartCondition(Module);
+ 250   8                    }
+ 251   7                    TimerControl(Module);
+ 252   7                  }
+ 253   6                }
+ 254   5                else
+ 255   5                {
+ 256   6                  ConsoleFunctionData[Module] |= MUTE_FUNCTION;
+ 257   6                  if (ConsoleFunctionData[Module]&ON_LED)
+ 258   6                  {
+ 259   7                    if (ConsoleModuleSettings[Module][STARTFADER]) 
+ 260   7                    {
+ 261   8                        CheckStartCondition(Module);
+ 262   8                    }
+ 263   7                    //OnAir1/2 Control
+ 264   7                    OnAirControl();
+ 265   7      
+ 266   7                    TimerControl(Module);
+ 267   7      
+ 268   7                    //DJ-Control
+ 269   7                    DJControl();
+ 270   7      
+ 271   7                    //StudioMic Control
+ 272   7                    StudioMicControl();
+ 273   7                  }
+ 274   6                  else
+ 275   6                  {
+ 276   7                    if ((ConsoleModuleSettings[Module][STARTFADER]) && (!ConsoleModuleSettings[Module][STARTON]))
+ 277   7                    {
+ 278   8                      CheckStartCondition(Module);
+ 279   8                    }
+ 280   7                  }
+ 281   6                  ConsoleFunctionData[Module] &= REMOTE_FUNCTION^0xFF;
+ 282   6                  SendSerialData = 1;
+ 283   6                }
+ 284   5      // was eerst het OnEvent JB
+ 285   5              }
+ 286   4              break;
+ 287   4              case TELCO:
+ 288   4              { // Telco
+ 289   5                if (EventOn)
+ 290   5                {// JB was else
+ 291   6                  if (ConsoleFunctionData[Module]&ON_LED)
+ 292   6                  {
+ 293   7                    char TelcoNr = GetTelcoNrFromModuleNr(Module);
+ 294   7                    if ((TelcoNr>=0) && (TelcoNr<4))
+ 295   7                    {
+ 296   8                      SerialBufferOut[SerialBufferOutPtrTop++] = TODIRECTOR_TELCO_CUE;
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 6   
+
+ 297   8                      SerialBufferOut[SerialBufferOutPtrTop++] = TelcoNr;
+ 298   8                      SerialBufferOut[SerialBufferOutPtrTop++] = 0x00;
+ 299   8                    }
+ 300   7      
+ 301   7                    //OnAir1/2 Control
+ 302   7                    OnAirControl();
+ 303   7                    TimerControl(Module);
+ 304   7                    
+ 305   7                    ConsoleFunctionData[Module] &= CUE_LED^0xFF;
+ 306   7                    ConsoleFunctionData[Module] &= CUE_FUNCTION^0xFF;
+ 307   7      
+ 308   7                    //Cue-Control
+ 309   7                    if (ConsoleMasterSettings[AUTOCUERESET])
+ 310   7                    {
+ 311   8                      if (((ModuleData[Module][FADERON]&0x80)) && ((ConsoleFunctionData[Module]&ON_LED)))
+ 312   8                      {  // !JB
+ 313   9                        unsigned char cntModule;
+ 314   9                        for (cntModule=0; cntModule<NROFMODULES; cntModule++)
+ 315   9                        {
+ 316  10                          char TelcoNr = GetTelcoNrFromModuleNr(cntModule);
+ 317  10                          if ((TelcoNr>=0) && (TelcoNr<4))
+ 318  10                          {
+ 319  11                            SerialBufferOut[SerialBufferOutPtrTop++] = TODIRECTOR_TELCO_CUE;
+ 320  11                            SerialBufferOut[SerialBufferOutPtrTop++] = TelcoNr;
+ 321  11                            SerialBufferOut[SerialBufferOutPtrTop++] = 0x00;
+ 322  11                          }
+ 323  10      
+ 324  10                          ConsoleFunctionData[cntModule] &= CUE_LED^0xFF;
+ 325  10                          ConsoleFunctionData[cntModule] &= CUE_FUNCTION^0xFF;
+ 326  10      
+ 327  10                        }
+ 328   9                      }
+ 329   8                    }
+ 330   7                    CueControl();
+ 331   7      
+ 332   7                    ConsoleFunctionData[Module] &= MUTE_FUNCTION^0xFF;
+ 333   7                    SendSerialData = 1;
+ 334   7                  }
+ 335   6                }
+ 336   5                else
+ 337   5                {     // JB was if
+ 338   6                  //OnAir1/2 Control
+ 339   6                  OnAirControl();
+ 340   6                  TimerControl(Module);
+ 341   6                  ConsoleFunctionData[Module] |= MUTE_FUNCTION;
+ 342   6                  SendSerialData = 1;
+ 343   6                }
+ 344   5              }
+ 345   4              break;
+ 346   4            }
+ 347   3          }
+ 348   2          break;
+ 349   2          case PFL:
+ 350   2          {
+ 351   3            switch (OperatingMode)
+ 352   3            {
+ 353   4              case MODULEMODE:
+ 354   4              {
+ 355   5                if ((EventOn) && (ConsoleMasterSettings[4]))
+ 356   5                {
+ 357   6                  unsigned char cntByte;
+ 358   6      
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 7   
+
+ 359   6                  char Buffer[] ="Module xx: xxx  ";
+ 360   6                  
+ 361   6                  if (ConsoleModuleSettings[Module][TextStringPtr])
+ 362   6                    ConsoleModuleSettings[Module][TextStringPtr] = 0;
+ 363   6                  else
+ 364   6                    ConsoleModuleSettings[Module][TextStringPtr] = 1;
+ 365   6      
+ 366   6                  if (ModuleType[Module]==TELCO)
+ 367   6                  {
+ 368   7                    switch (TextStringPtr)
+ 369   7                    {
+ 370   8                      case TIMERMIC:
+ 371   8                      case STARTMIC:
+ 372   8                      case STARTFADER:
+ 373   8                      case STARTPULS:
+ 374   8                      case DJMIC:
+ 375   8                      case ANNMIC:
+ 376   8                      case STUDIOMIC:
+ 377   8                      case ONAIR1MIC:
+ 378   8                      case ONAIR2MIC:
+ 379   8                      case REMMIC:
+ 380   8                      case REMONMIC:
+ 381   8                      case REMONLINEA:
+ 382   8                      case REMONLINEB:
+ 383   8                      case MICATLINEA:
+ 384   8                      case MICATLINEB:
+ 385   8                      {
+ 386   9                        ConsoleModuleSettings[Module][TextStringPtr]=0x00;
+ 387   9                      }
+ 388   8                      break;
+ 389   8                      case STARTON:
+ 390   8                      case STARTLINEA:
+ 391   8                      case STARTLINEB:
+ 392   8                      case STARTCUE:
+ 393   8                      {
+ 394   9                        ConsoleModuleSettings[Module][TextStringPtr]=0x01;
+ 395   9                      }
+ 396   8                      break;
+ 397   8                    }
+ 398   7                  }
+ 399   6      
+ 400   6                  switch (TextStringPtr)
+ 401   6                  {
+ 402   7                    case STARTLINEA:
+ 403   7                    case STARTLINEB:
+ 404   7                    case STARTMIC:
+ 405   7                    case STARTFADER:
+ 406   7                    case STARTON:
+ 407   7                    case STARTCUE:
+ 408   7                    case STARTPULS:
+ 409   7                    {
+ 410   8                      unsigned char cntModule;
+ 411   8                      for (cntModule=0; cntModule<NROFMODULES; cntModule++)
+ 412   8                      {
+ 413   9                        StartControl(cntModule, 0);
+ 414   9                        TimerControl(cntModule);
+ 415   9                      }
+ 416   8                    }
+ 417   7                    break;
+ 418   7                    case DJMIC:
+ 419   7                    {
+ 420   8                      DJControl();
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 8   
+
+ 421   8                    }
+ 422   7                    break;
+ 423   7                    case MICATLINEA:
+ 424   7                    case MICATLINEB:
+ 425   7                    {
+ 426   8                      DJControl();
+ 427   8                      StudioMicControl();
+ 428   8                    }
+ 429   7                    break;
+ 430   7                    case ANNMIC:
+ 431   7                    {
+ 432   8                      if (ModuleType[Module]==TRIPLE)
+ 433   8                      {
+ 434   9                        unsigned char cntModule;
+ 435   9                        for (cntModule=0; cntModule<NROFMODULES; cntModule++)
+ 436   9                        {
+ 437  10                          if (cntModule!=Module)
+ 438  10                            ConsoleModuleSettings[cntModule][TextStringPtr] = 0x00;
+ 439  10                        }
+ 440   9                      }
+ 441   8                      StudioMicControl();
+ 442   8                    }
+ 443   7                    break;
+ 444   7                    case STUDIOMIC:
+ 445   7                    {
+ 446   8                      StudioMicControl();
+ 447   8                    }
+ 448   7                    break;
+ 449   7                    case ONAIR1LINEA:
+ 450   7                    case ONAIR1LINEB:
+ 451   7                    case ONAIR1MIC:
+ 452   7                    case ONAIR2LINEA:
+ 453   7                    case ONAIR2LINEB:
+ 454   7                    case ONAIR2MIC:
+ 455   7                    {
+ 456   8                      //OnAir1/2 Control
+ 457   8                      OnAirControl();
+ 458   8                    }
+ 459   7                    break;
+ 460   7                  }
+ 461   6      
+ 462   6                  Buffer[7] = 0x30+((Module+1)/10);
+ 463   6                  Buffer[8] = 0x30+((Module+1)%10);
+ 464   6                  if (TextStringPtr==STARTPULS)
+ 465   6                  {
+ 466   7                    if (ConsoleModuleSettings[Module][TextStringPtr])
+ 467   7                    {
+ 468   8                      Buffer[11] = 'P';
+ 469   8                      Buffer[12] = 'u';
+ 470   8                      Buffer[13] = 'l';
+ 471   8                      Buffer[14] = 's';
+ 472   8                    }
+ 473   7                    else
+ 474   7                    {
+ 475   8                      Buffer[11] = 'C';
+ 476   8                      Buffer[12] = 'o';
+ 477   8                      Buffer[13] = 'n';
+ 478   8                      Buffer[14] = 't';
+ 479   8                    }
+ 480   7                  }
+ 481   6                  else
+ 482   6                  {
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 9   
+
+ 483   7                    if (ConsoleModuleSettings[Module][TextStringPtr])
+ 484   7                    {
+ 485   8                      Buffer[11] = 'Y';
+ 486   8                      Buffer[12] = 'e';
+ 487   8                      Buffer[13] = 's';
+ 488   8                    }
+ 489   7                    else
+ 490   7                    {
+ 491   8                      Buffer[11] = ' ';
+ 492   8                      Buffer[12] = 'N';
+ 493   8                      Buffer[13] = 'o';
+ 494   8                    }
+ 495   7                  }
+ 496   6                  SetLCD(0,"\xC0");
+ 497   6                  SetLCD(1,Buffer);
+ 498   6                  ShowFunction(TextStringPtr);
+ 499   6      
+ 500   6            
+ 501   6                  SerialBufferOut[SerialBufferOutPtrTop++] = SERIAL_MODULESETUPDATA;
+ 502   6                  SerialBufferOut[SerialBufferOutPtrTop++] = Module;
+ 503   6                  for (cntByte=0; cntByte<29; cntByte++)
+ 504   6                  {
+ 505   7                    SerialBufferOut[SerialBufferOutPtrTop++] =
+ 506   7                    ConsoleModuleSettings[Module][cntByte]&0x7F;
+ 507   7                  }
+ 508   6                }
+ 509   5              }
+ 510   4              break;
+ 511   4              default:
+ 512   4              {
+ 513   5                switch (ModuleType[Module])
+ 514   5                {
+ 515   6                  case TRIPLE:
+ 516   6                  { // Triple
+ 517   7                    if (EventOn)
+ 518   7                    {
+ 519   8                      if (ConsoleFunctionData[Module]&CUE_FUNCTION)
+ 520   8                      {
+ 521   9                        unsigned char cntModule;
+ 522   9      
+ 523   9                        ConsoleFunctionData[Module] &= CUE_LED^0xFF;
+ 524   9                        ConsoleFunctionData[Module] &= CUE_FUNCTION^0xFF;
+ 525   9      
+ 526   9                        CheckStartCondition(Module);
+ 527   9                        //DJ-Control
+ 528   9                        DJControl();
+ 529   9      
+ 530   9                        //Check auto communication
+ 531   9                        ConsoleFunctionData[16] &= ANNOUNCER_COMM_FUNCTION_LED^0xFF;
+ 532   9                        for (cntModule=0; cntModule<NROFMODULES; cntModule++)
+ 533   9                        {
+ 534  10                          if (ConsoleFunctionData[cntModule]&CUE_LED)
+ 535  10                          {
+ 536  11                            if ((ModuleData[cntModule][MIC_RING]&0x80) && (ConsoleModuleSettings[cntModule][ANNMIC]) && (Co
+             -nsoleFunctionData[cntModule]&MUTE_FUNCTION) && (ConsoleMasterSettings[AUTOCOM]))
+ 537  11                              ConsoleFunctionData[16] |= ANNOUNCER_COMM_FUNCTION_LED;
+ 538  11                          }
+ 539  10                        }
+ 540   9                        CheckTBMic();
+ 541   9                        SendSerialData = 1;
+ 542   9                      }
+ 543   8                      else
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 10  
+
+ 544   8                      {
+ 545   9                        unsigned char cntModule;
+ 546   9      
+ 547   9                        ConsoleFunctionData[Module] |= CUE_LED;
+ 548   9                        ConsoleFunctionData[Module] |= CUE_FUNCTION;
+ 549   9                        CheckStartCondition(Module);                  
+ 550   9      
+ 551   9                        //DJ-Control
+ 552   9                        DJControl();
+ 553   9      
+ 554   9                        ConsoleFunctionData[16] &= ANNOUNCER_COMM_FUNCTION_LED^0xFF;
+ 555   9                        for (cntModule=0; cntModule<NROFMODULES; cntModule++)
+ 556   9                        {
+ 557  10                          if (ConsoleFunctionData[cntModule]&CUE_LED)
+ 558  10                          {
+ 559  11                            if ((ModuleData[cntModule][MIC_RING]&0x80) && (ConsoleModuleSettings[cntModule][ANNMIC]) && (Co
+             -nsoleFunctionData[cntModule]&MUTE_FUNCTION) && (ConsoleMasterSettings[AUTOCOM]))
+ 560  11                            {
+ 561  12                              ConsoleFunctionData[16] |= ANNOUNCER_COMM_FUNCTION_LED;
+ 562  12                            }
+ 563  11                          }
+ 564  10                      }
+ 565   9                        CheckTBMic();
+ 566   9                        SendSerialData = 1;
+ 567   9                      }
+ 568   8                      // Cue-Control
+ 569   8                      CueControl();
+ 570   8                    }
+ 571   7                  }
+ 572   6                  break;
+ 573   6                  case TELCO:
+ 574   6                  { // Telco
+ 575   7                    if ((EventOn) && (!(ModuleData[Module][FADERON]&0x80)))
+ 576   7                    {  // JB
+ 577   8                      char TelcoNr = GetTelcoNrFromModuleNr(Module);
+ 578   8      
+ 579   8                      if (ConsoleFunctionData[Module]&CUE_FUNCTION)
+ 580   8                      {
+ 581   9                        ConsoleFunctionData[Module] &= CUE_LED^0xFF;
+ 582   9                        ConsoleFunctionData[Module] &= CUE_FUNCTION^0xFF;
+ 583   9      
+ 584   9                        if ((TelcoNr>=0) && (TelcoNr<4))
+ 585   9                        {
+ 586  10                          SerialBufferOut[SerialBufferOutPtrTop++] = TODIRECTOR_TELCO_CUE;
+ 587  10                          SerialBufferOut[SerialBufferOutPtrTop++] = TelcoNr;
+ 588  10                          SerialBufferOut[SerialBufferOutPtrTop++] = 0x00;
+ 589  10                        }
+ 590   9                        CheckTBMic();
+ 591   9                        SendSerialData = 1;
+ 592   9                      }
+ 593   8                      else
+ 594   8                      {
+ 595   9                        ConsoleFunctionData[Module] |= START_FUNCTION;
+ 596   9                        ConsoleFunctionData[Module] |= ON_LED;
+ 597   9                        ConsoleFunctionData[Module] |= CUE_LED;
+ 598   9                        ConsoleFunctionData[Module] |= REMOTE_FUNCTION;
+ 599   9      //                  ConsoleFunctionData[Module] |= CUE_FUNCTION;
+ 600   9                        cntCueFunction[Module] = DELAY;
+ 601   9      
+ 602   9                        SerialBufferOut[SerialBufferOutPtrTop++] = SERIAL_START;
+ 603   9                        SerialBufferOut[SerialBufferOutPtrTop++] = Module;
+ 604   9                        SerialBufferOut[SerialBufferOutPtrTop++] = 0x01;
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 11  
+
+ 605   9      
+ 606   9                        if ((TelcoNr>=0) && (TelcoNr<4))
+ 607   9                        {
+ 608  10                          SerialBufferOut[SerialBufferOutPtrTop++] = TODIRECTOR_TELCO_CONNECT;
+ 609  10                          SerialBufferOut[SerialBufferOutPtrTop++] = TelcoNr;
+ 610  10                          SerialBufferOut[SerialBufferOutPtrTop++] = 0x01;
+ 611  10                        }
+ 612   9      
+ 613   9                        if ((TelcoNr>=0) && (TelcoNr<4))
+ 614   9                        {
+ 615  10                          SerialBufferOut[SerialBufferOutPtrTop++] = TODIRECTOR_TELCO_CUE;
+ 616  10                          SerialBufferOut[SerialBufferOutPtrTop++] = TelcoNr;
+ 617  10                          SerialBufferOut[SerialBufferOutPtrTop++] = 0x01;
+ 618  10                        }
+ 619   9                        CheckTBMic();
+ 620   9                        SendSerialData = 1;
+ 621   9                      }
+ 622   8                      // Cue-Control
+ 623   8                      CueControl();
+ 624   8                    }
+ 625   7                  }
+ 626   6                  break;
+ 627   6                }
+ 628   5              }
+ 629   4              break;
+ 630   4            }
+ 631   3          }
+ 632   2          break;
+ 633   2          case ON:
+ 634   2          {
+ 635   3            switch (ModuleType[Module])
+ 636   3            {
+ 637   4              case TRIPLE:
+ 638   4              { // Triple
+ 639   5                if (ConsoleModuleSettings[Module][SWITCHSTART])
+ 640   5                {
+ 641   6                  ConsoleFunctionData[Module] |= ON_LED;
+ 642   6                  ConsoleFunctionData[Module] |= REMOTE_FUNCTION;
+ 643   6                  ConsoleFunctionData[Module] &= MUTE_FUNCTION^0xFF;
+ 644   6      
+ 645   6                  if (EventOn)
+ 646   6                  {
+ 647   7                    StartControl(Module,1);
+ 648   7                    StartActive[Module] = 1;
+ 649   7                  }
+ 650   6                  else
+ 651   6                  {
+ 652   7                    if (!ConsoleModuleSettings[Module][STARTPULS])
+ 653   7                    {
+ 654   8                      StartControl(Module,0);
+ 655   8                      StartActive[Module] = 0;
+ 656   8                    }
+ 657   7                  }
+ 658   6                  SendSerialData = 1;
+ 659   6                }
+ 660   5                else
+ 661   5                {
+ 662   6                  if (EventOn)
+ 663   6                  {
+ 664   7                    if (ConsoleFunctionData[Module]&ON_LED)
+ 665   7                    {
+ 666   8                      ConsoleFunctionData[Module] &= ON_LED^0xFF;
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 12  
+
+ 667   8                      ConsoleFunctionData[Module] &= REMOTE_FUNCTION^0xFF;
+ 668   8        
+ 669   8                      CheckStartCondition(Module);
+ 670   8      
+ 671   8                      ConsoleFunctionData[Module] |= MUTE_FUNCTION;
+ 672   8              
+ 673   8                      if ((ModuleData[Module][FADERON]&0x80))
+ 674   8                      {  // !JB
+ 675   9                        CheckStartCondition(Module);
+ 676   9      
+ 677   9                        //DJ-Control
+ 678   9                        DJControl();
+ 679   9            
+ 680   9                        //Studio-Mic-Control
+ 681   9                        StudioMicControl();     
+ 682   9      
+ 683   9                        //Timer-Control
+ 684   9                        TimerControl(Module);
+ 685   9              
+ 686   9                        //OnAir Control
+ 687   9                        OnAirControl();
+ 688   9                      }
+ 689   8                      SendSerialData = 1;
+ 690   8                    }
+ 691   7                    else
+ 692   7                    {
+ 693   8                      ConsoleFunctionData[Module] |= ON_LED;
+ 694   8      
+ 695   8                      CheckStartCondition(Module);
+ 696   8      
+ 697   8                      if ((ModuleData[Module][FADERON]&0x80))
+ 698   8                      {  // !JB
+ 699   9                        ConsoleFunctionData[Module] |= REMOTE_FUNCTION;
+ 700   9      
+ 701   9                        CheckStartCondition(Module);
+ 702   9      
+ 703   9                        ConsoleFunctionData[Module] &= CUE_LED^0xFF;
+ 704   9                        ConsoleFunctionData[Module] &= CUE_FUNCTION^0xFF;
+ 705   9                      
+ 706   9                        //Cue-Control
+ 707   9                        if (ConsoleMasterSettings[AUTOCUERESET])
+ 708   9                        {
+ 709  10                          if (((ModuleData[Module][FADERON]&0x80)) && ((ConsoleFunctionData[Module]&ON_LED)))
+ 710  10                          {  // !JB
+ 711  11                            unsigned char cntModule;
+ 712  11                            for (cntModule=0; cntModule<NROFMODULES; cntModule++)
+ 713  11                            {
+ 714  12                              ConsoleFunctionData[cntModule] &= CUE_LED^0xFF;
+ 715  12                              ConsoleFunctionData[cntModule] &= CUE_FUNCTION^0xFF;
+ 716  12                            }
+ 717  11                          }
+ 718  10                        }
+ 719   9                        CueControl();
+ 720   9            
+ 721   9                        //Timer-Control
+ 722   9                        TimerControl(Module);
+ 723   9                            
+ 724   9                        //OnAirControl
+ 725   9                        OnAirControl();
+ 726   9      
+ 727   9                        //DJ-Control
+ 728   9                        DJControl();
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 13  
+
+ 729   9            
+ 730   9                        //Studio-Mic-Control
+ 731   9                        StudioMicControl();
+ 732   9      
+ 733   9                        CheckStartCondition(Module);
+ 734   9                                  
+ 735   9                        ConsoleFunctionData[Module] &= MUTE_FUNCTION^0xFF;          
+ 736   9                      }
+ 737   8                      SendSerialData = 1;
+ 738   8                    }
+ 739   7                  }
+ 740   6                }
+ 741   5              }
+ 742   4              break;
+ 743   4              case TELCO:
+ 744   4              { //Telco
+ 745   5                if (EventOn)
+ 746   5                {
+ 747   6                  char TelcoNr = GetTelcoNrFromModuleNr(Module);
+ 748   6      
+ 749   6                  if (ConsoleFunctionData[Module]&ON_LED)
+ 750   6                  {
+ 751   7                    char TelcoNr = GetTelcoNrFromModuleNr(Module);
+ 752   7                    if ((TelcoNr>=0) && (TelcoNr<4))
+ 753   7                    {
+ 754   8                      SerialBufferOut[SerialBufferOutPtrTop++] = TODIRECTOR_TELCO_CUE;
+ 755   8                      SerialBufferOut[SerialBufferOutPtrTop++] = TelcoNr;
+ 756   8                      SerialBufferOut[SerialBufferOutPtrTop++] = 0x00;
+ 757   8      
+ 758   8                      SerialBufferOut[SerialBufferOutPtrTop++] = TODIRECTOR_TELCO_MUTE;
+ 759   8                      SerialBufferOut[SerialBufferOutPtrTop++] = TelcoNr;
+ 760   8                      SerialBufferOut[SerialBufferOutPtrTop++] = 0x00;
+ 761   8                    }
+ 762   7      
+ 763   7                    ConsoleFunctionData[Module] &= ON_LED^0xFF;
+ 764   7                    ConsoleFunctionData[Module] |= MUTE_FUNCTION;
+ 765   7                    ConsoleFunctionData[Module] &= REMOTE_FUNCTION^0xFF;
+ 766   7                    ConsoleFunctionData[Module] &= CUE_FUNCTION^0xFF;
+ 767   7                    ConsoleFunctionData[Module] &= CUE_LED^0xFF;
+ 768   7      //              ConsoleFunctionData[Module] &= START_FUNCTION^0xFF;     
+ 769   7                    cntStartFunction[Module] = DELAY;
+ 770   7              
+ 771   7                    SerialBufferOut[SerialBufferOutPtrTop++] = SERIAL_STOP;
+ 772   7                    SerialBufferOut[SerialBufferOutPtrTop++] = Module;
+ 773   7                    SerialBufferOut[SerialBufferOutPtrTop++] = 0x01;
+ 774   7      
+ 775   7                    CueControl();
+ 776   7      
+ 777   7                    if ((ModuleData[Module][FADERON]&0x80))
+ 778   7                    {  // !JB
+ 779   8                      //Timer-Control
+ 780   8                      TimerControl(Module);
+ 781   8              
+ 782   8                      //OnAir Control
+ 783   8                      OnAirControl();
+ 784   8                    }
+ 785   7      
+ 786   7                    if ((TelcoNr>=0) && (TelcoNr<4))
+ 787   7                    {
+ 788   8                      SerialBufferOut[SerialBufferOutPtrTop++] = TODIRECTOR_TELCO_CONNECT;
+ 789   8                      SerialBufferOut[SerialBufferOutPtrTop++] = TelcoNr;
+ 790   8                      SerialBufferOut[SerialBufferOutPtrTop++] = 0x00;
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 14  
+
+ 791   8                    }
+ 792   7                    SendSerialData = 1;
+ 793   7                  }
+ 794   6                  else
+ 795   6                  {
+ 796   7                    ConsoleFunctionData[Module] |= ON_LED;
+ 797   7                    ConsoleFunctionData[Module] |= START_FUNCTION;      
+ 798   7                    ConsoleFunctionData[Module] |= REMOTE_FUNCTION;
+ 799   7              
+ 800   7                    SerialBufferOut[SerialBufferOutPtrTop++] = SERIAL_START;
+ 801   7                    SerialBufferOut[SerialBufferOutPtrTop++] = Module;
+ 802   7                    SerialBufferOut[SerialBufferOutPtrTop++] = 0x01;
+ 803   7                    
+ 804   7                    if ((ModuleData[Module][FADERON]&0x80))
+ 805   7                    { // !JB
+ 806   8                      char TelcoNr = GetTelcoNrFromModuleNr(Module);
+ 807   8                      if ((TelcoNr>=0) && (TelcoNr<4))
+ 808   8                      {
+ 809   9                        SerialBufferOut[SerialBufferOutPtrTop++] = TODIRECTOR_TELCO_CUE;
+ 810   9                        SerialBufferOut[SerialBufferOutPtrTop++] = TelcoNr;
+ 811   9                        SerialBufferOut[SerialBufferOutPtrTop++] = 0x00;
+ 812   9                      }
+ 813   8      
+ 814   8                      ConsoleFunctionData[Module] &= CUE_LED^0xFF;
+ 815   8                      ConsoleFunctionData[Module] &= CUE_FUNCTION^0xFF;
+ 816   8      //                ConsoleFunctionData[Module] &= MUTE_FUNCTION^0xFF;
+ 817   8                      cntMuteFunction[Module] = DELAY;
+ 818   8      
+ 819   8                      //Cue-Control
+ 820   8                      if (ConsoleMasterSettings[AUTOCUERESET])
+ 821   8                      {
+ 822   9                        if (((ModuleData[Module][FADERON]&0x80)) && ((ConsoleFunctionData[Module]&ON_LED)))
+ 823   9                        {   // !JB
+ 824  10                          unsigned char cntModule;
+ 825  10                          for (cntModule=0; cntModule<NROFMODULES; cntModule++)
+ 826  10                          {
+ 827  11                            char TelcoNr = GetTelcoNrFromModuleNr(cntModule);
+ 828  11                            if ((TelcoNr>=0) && (TelcoNr<4))
+ 829  11                            {
+ 830  12                              SerialBufferOut[SerialBufferOutPtrTop++] = TODIRECTOR_TELCO_CUE;
+ 831  12                              SerialBufferOut[SerialBufferOutPtrTop++] = TelcoNr;
+ 832  12                              SerialBufferOut[SerialBufferOutPtrTop++] = 0x00;
+ 833  12                            }
+ 834  11      
+ 835  11                            ConsoleFunctionData[cntModule] &= CUE_LED^0xFF;
+ 836  11                            ConsoleFunctionData[cntModule] &= CUE_FUNCTION^0xFF;
+ 837  11                          }
+ 838  10                        }
+ 839   9                      }
+ 840   8                      CueControl();
+ 841   8            
+ 842   8                      //Timer-Control
+ 843   8                      TimerControl(Module);
+ 844   8            
+ 845   8                      //OnAirControl
+ 846   8                      OnAirControl();
+ 847   8                    }
+ 848   7      
+ 849   7                    if ((TelcoNr>=0) && (TelcoNr<4))
+ 850   7                    {
+ 851   8                      SerialBufferOut[SerialBufferOutPtrTop++] = TODIRECTOR_TELCO_CONNECT;
+ 852   8                      SerialBufferOut[SerialBufferOutPtrTop++] = TelcoNr;
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 15  
+
+ 853   8                      SerialBufferOut[SerialBufferOutPtrTop++] = 0x01;
+ 854   8                    }
+ 855   7                    SendSerialData = 1;
+ 856   7                  }
+ 857   6                }
+ 858   5              }
+ 859   4              break;
+ 860   4            }
+ 861   3          }
+ 862   2          break;
+ 863   2          case LINEB:
+ 864   2          {
+ 865   3            CheckStartCondition(Module);
+ 866   3            TimeAndDate.Hours = 0;
+ 867   3            TimeAndDate.Minutes = 0;
+ 868   3            TimeAndDate.Seconds = 0;
+ 869   3            TimeAndDate.Frames = 0;
+ 870   3            TimerControl(Module);
+ 871   3            DJControl();
+ 872   3            StudioMicControl();
+ 873   3            OnAirControl();
+ 874   3          }
+ 875   2          break;
+ 876   2          case MIC_RING:
+ 877   2          {
+ 878   3            switch (ModuleType[Module])
+ 879   3            {
+ 880   4              case TRIPLE:
+ 881   4              {
+ 882   5                if (!(ModuleData[Module][MIC_RING]&0x80))
+ 883   5                {
+ 884   6                  ConsoleFunctionData[16] &= ANNOUNCER_COMM_FUNCTION_LED^0xFF;
+ 885   6                  CheckTBMic();
+ 886   6                  SendSerialData = 1;
+ 887   6                }
+ 888   5          
+ 889   5                CheckStartCondition(Module);
+ 890   5                TimeAndDate.Hours = 0;
+ 891   5                TimeAndDate.Minutes = 0;
+ 892   5                TimeAndDate.Seconds = 0;
+ 893   5                TimeAndDate.Frames = 0;
+ 894   5                TimerControl(Module);
+ 895   5                DJControl();
+ 896   5                StudioMicControl();
+ 897   5                OnAirControl();
+ 898   5              }
+ 899   4              break;
+ 900   4              case TELCO:
+ 901   4              {
+ 902   5                char TelcoNr = GetTelcoNrFromModuleNr(Module);
+ 903   5                
+ 904   5                if (EventOn)
+ 905   5                {
+ 906   6                  ConsoleFunctionData[Module]|=CUE_LED;
+ 907   6                  ConsoleFunctionData[Module]|=REMOTE_FUNCTION;
+ 908   6      
+ 909   6                  if ((TelcoNr>=0) && (TelcoNr<4))
+ 910   6                  {
+ 911   7                    SerialBufferOut[SerialBufferOutPtrTop++] = TODIRECTOR_TELCO_RING;
+ 912   7                    SerialBufferOut[SerialBufferOutPtrTop++] = TelcoNr;
+ 913   7                    SerialBufferOut[SerialBufferOutPtrTop++] = 0x01;
+ 914   7                  }
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 16  
+
+ 915   6                }
+ 916   5                else
+ 917   5                {
+ 918   6                  if (!(ConsoleFunctionData[Module]&START_FUNCTION))
+ 919   6                  {
+ 920   7                    ConsoleFunctionData[Module]&=CUE_LED^0xFF;
+ 921   7                    ConsoleFunctionData[Module]&=REMOTE_FUNCTION^0xFF;
+ 922   7                  }
+ 923   6      
+ 924   6                  if ((TelcoNr>=0) && (TelcoNr<4))
+ 925   6                  {
+ 926   7                    SerialBufferOut[SerialBufferOutPtrTop++] = TODIRECTOR_TELCO_RING;
+ 927   7                    SerialBufferOut[SerialBufferOutPtrTop++] = TelcoNr;
+ 928   7                    SerialBufferOut[SerialBufferOutPtrTop++] = 0x00;
+ 929   7                  }
+ 930   6                }
+ 931   5                SendSerialData = 1;
+ 932   5              }
+ 933   4              break;
+ 934   4            }
+ 935   3          }
+ 936   2          break;
+ 937   2          case ESCAPE:
+ 938   2          {
+ 939   3            SetLCD(0,"\xC0");
+ 940   3            if (EventOn)
+ 941   3            {
+ 942   4              if (OperatingMode != NORMALMODE)
+ 943   4              {
+ 944   5                char TextBuffer[9];
+ 945   5      
+ 946   5                if (OperatingMode==MODULEMODE)
+ 947   5                {
+ 948   6                  unsigned char cntModule, cntByte;
+ 949   6                  for (cntModule=0; cntModule<NROFMODULES; cntModule++)
+ 950   6                  {
+ 951   7                    for (cntByte=0; cntByte<29; cntByte++)
+ 952   7                    {
+ 953   8                      ConsoleModuleSettings[cntModule][cntByte] = UndoConsoleModuleSettings[cntModule][cntByte];
+ 954   8                    }
+ 955   7                  }
+ 956   6                }
+ 957   5                else if (OperatingMode==MASTERMODE)
+ 958   5                {
+ 959   6                  unsigned char cntByte;
+ 960   6                  for (cntByte=0; cntByte<5; cntByte++)
+ 961   6                  {
+ 962   7                      ConsoleMasterSettings[cntByte] = UndoConsoleMasterSettings[cntByte];
+ 963   7                  }
+ 964   6                }
+ 965   5      
+ 966   5                OperatingMode = NORMALMODE;
+ 967   5                TextStringPtr = 0;
+ 968   5      
+ 969   5                SetLCD(0,"\x80");
+ 970   5                SetLCD(1,"                ");
+ 971   5                SetLCD(0,"\xC0");
+ 972   5                SetLCD(1, TextString[TextStringPtr]);
+ 973   5      
+ 974   5                TextBuffer[0] = 0x30+(TimeAndDate.Hours/10);
+ 975   5                TextBuffer[1] = 0x30+(TimeAndDate.Hours%10);
+ 976   5                TextBuffer[2] = ':';
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 17  
+
+ 977   5                TextBuffer[3] = 0x30+(TimeAndDate.Minutes/10);
+ 978   5                TextBuffer[4] = 0x30+(TimeAndDate.Minutes%10);
+ 979   5                TextBuffer[5] = ':';
+ 980   5                TextBuffer[6] = 0x30+(TimeAndDate.Seconds/10);
+ 981   5                TextBuffer[7] = 0x30+(TimeAndDate.Seconds%10);
+ 982   5      /*        TextBuffer[8] = ':';
+ 983   5                TextBuffer[9] = 0x30+(TimeAndDate.Frames/10);
+ 984   5                TextBuffer[10] = 0x30+(TimeAndDate.Frames%10);
+ 985   5                TextBuffer[11] = 0;*/
+ 986   5                TextBuffer[8] = 0;
+ 987   5                SetLCD(0,"\x84");
+ 988   5                SetLCD(1,TextBuffer);
+ 989   5                SetConsoleData();
+ 990   5              }
+ 991   4              else if (TextStringPtr==0)
+ 992   4              {
+ 993   5                TimeAndDate.Hours = 0;
+ 994   5                TimeAndDate.Minutes = 0;
+ 995   5                TimeAndDate.Seconds = 0;
+ 996   5                TimeAndDate.Frames = 0;
+ 997   5              }
+ 998   4              else
+ 999   4              {
+1000   5                char TextBuffer[9];
+1001   5                //New in v1.12
+1002   5                SetupLCD();
+1003   5                SetLCD(0,"\xC0");
+1004   5      
+1005   5                SetLCD(0,"\x80");
+1006   5                SetLCD(1,"                ");
+1007   5                SetLCD(0,"\xC0");
+1008   5                SetLCD(1, TextString[TextStringPtr]);
+1009   5      
+1010   5                TextBuffer[0] = 0x30+(TimeAndDate.Hours/10);
+1011   5                TextBuffer[1] = 0x30+(TimeAndDate.Hours%10);
+1012   5                TextBuffer[2] = ':';
+1013   5                TextBuffer[3] = 0x30+(TimeAndDate.Minutes/10);
+1014   5                TextBuffer[4] = 0x30+(TimeAndDate.Minutes%10);
+1015   5                TextBuffer[5] = ':';
+1016   5                TextBuffer[6] = 0x30+(TimeAndDate.Seconds/10);
+1017   5                TextBuffer[7] = 0x30+(TimeAndDate.Seconds%10);
+1018   5      /*        TextBuffer[8] = ':';
+1019   5                TextBuffer[9] = 0x30+(TimeAndDate.Frames/10);
+1020   5                TextBuffer[10] = 0x30+(TimeAndDate.Frames%10);
+1021   5                TextBuffer[11] = 0;*/
+1022   5                TextBuffer[8] = 0;
+1023   5                SetLCD(0,"\x84");
+1024   5                SetLCD(1,TextBuffer);
+1025   5                SetConsoleData();
+1026   5              }
+1027   4      /*      ReadData(I2CAddressEEProm, 0x0000, Buffer1, 16);
+1028   4              Buffer1[16] = 0;
+1029   4              SetLCD(1,Buffer1);*/
+1030   4            }
+1031   3          }
+1032   2          break;
+1033   2          case ENTER:
+1034   2          {
+1035   3            if (EventOn)
+1036   3            {
+1037   4              switch (OperatingMode)
+1038   4              {
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 18  
+
+1039   5                case NORMALMODE:
+1040   5                {
+1041   6                  switch (TextStringPtr)
+1042   6                  {
+1043   7                    case 0:
+1044   7                    {
+1045   8                      TimeAndDate.Hours = 0;
+1046   8                      TimeAndDate.Minutes = 0;
+1047   8                      TimeAndDate.Seconds = 0;
+1048   8                      TimeAndDate.Frames = 0;
+1049   8                      GlobalTimerActive = 1;
+1050   8                    }
+1051   7                    break;
+1052   7                    case 1:
+1053   7                    {
+1054   8                      unsigned char cntModule, cntByte;
+1055   8                      for (cntModule=0; cntModule<NROFMODULES; cntModule++)
+1056   8                      {
+1057   9                        for (cntByte=0; cntByte<29; cntByte++)
+1058   9                        {
+1059  10                          UndoConsoleModuleSettings[cntModule][cntByte] = ConsoleModuleSettings[cntModule][cntByte];
+1060  10                        }
+1061   9                      }
+1062   8                      OperatingMode = MODULEMODE;
+1063   8                      TextStringPtr = 0;
+1064   8                      SetLCD(0,"\x80");
+1065   8                      SetLCD(1,ModuleTextString[TextStringPtr]);
+1066   8                      SetLCD(0,"\xC0");
+1067   8      //                SetLCD(1,"Select Module   ");
+1068   8                      SetLCD(1,"Toggle by SELECT");
+1069   8                      ShowFunction(TextStringPtr);
+1070   8                    }
+1071   7                    break;
+1072   7                    case 2:
+1073   7                    {
+1074   8                      unsigned char cntByte;
+1075   8                      for (cntByte=0; cntByte<5; cntByte++)
+1076   8                      {
+1077   9                          UndoConsoleMasterSettings[cntByte] = ConsoleMasterSettings[cntByte];
+1078   9                      }
+1079   8      
+1080   8                      OperatingMode = MASTERMODE;
+1081   8                      TextStringPtr = 0;
+1082   8                      SetLCD(0,"\x80");
+1083   8                      SetLCD(1,MasterTextString[TextStringPtr]);
+1084   8      
+1085   8                      SetLCD(0,"\xC0");
+1086   8                      if (ConsoleMasterSettings[TextStringPtr])
+1087   8                      {
+1088   9                        SetLCD(1,"Yes             ");
+1089   9                      }
+1090   8                      else
+1091   8                      {
+1092   9                        SetLCD(1," No             ");
+1093   9                      }
+1094   8                    }
+1095   7                    break;
+1096   7                    case 3:
+1097   7                    {
+1098   8                      OperatingMode = SYSTEMMODE;
+1099   8                      TextStringPtr = 0;
+1100   8                      SetLCD(0,"\x80");
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 19  
+
+1101   8                      SetLCD(1,SystemTextString[TextStringPtr]);
+1102   8                      ShowConfig();
+1103   8                    }
+1104   7                    break;
+1105   7                  }
+1106   6                }
+1107   5                break;
+1108   5                case SYSTEMMODE:
+1109   5                {
+1110   6                  char TextBuffer[9];
+1111   6                  switch (TextStringPtr)
+1112   6                  {
+1113   7                    case 1:
+1114   7                    { // EEPROM Load
+1115   8                      unsigned char cntModule;
+1116   8                      unsigned int Address = 0x0000;
+1117   8      
+1118   8                      Address = 0x0000;
+1119   8                      ReadData(I2CAddressEEProm, Address, &(ModuleType[0]), NROFMODULES);
+1120   8                      Address += NROFMODULES;
+1121   8                      for (cntModule=0; cntModule<NROFMODULES; cntModule++)
+1122   8                      {
+1123   9                        ReadData(I2CAddressEEProm, Address, &(ConsoleModuleSettings[cntModule][0]), 29);
+1124   9                        Address += 29;
+1125   9                      }
+1126   8                      ReadData(I2CAddressEEProm, Address, &(ConsoleMasterSettings[0]), 5);
+1127   8      
+1128   8      
+1129   8                      {//Reload
+1130   9                        unsigned char cntByte, cntChannel;
+1131   9      
+1132   9                        for (cntChannel=0; cntChannel<16; cntChannel++)
+1133   9                        {
+1134  10                          if ((ModuleType[cntChannel]==0x01) || (ModuleType[cntChannel]==0x02))
+1135  10                          {
+1136  11                            SerialBufferOut[SerialBufferOutPtrTop++] = SERIAL_MODULESETUPDATA;
+1137  11                            SerialBufferOut[SerialBufferOutPtrTop++] = cntChannel;
+1138  11                            for (cntByte=0; cntByte<29; cntByte++)
+1139  11                            {
+1140  12                              SerialBufferOut[SerialBufferOutPtrTop++] =
+1141  12                              ConsoleModuleSettings[cntChannel][cntByte]&0x7F;
+1142  12                            }
+1143  11                          }
+1144  10                          if ((SerialBufferOutPtrTop != SerialBufferOutPtrBottom) && SendSerialReady)
+1145  10                          {
+1146  11                            S0BUF = SerialBufferOut[SerialBufferOutPtrBottom++];
+1147  11                            SendSerialReady = 0;
+1148  11                          }
+1149  10                          while(!SendSerialReady);
+1150  10                        }
+1151   9      
+1152   9                        SerialBufferOut[SerialBufferOutPtrTop++] = SERIAL_MASTERSETUPDATA;
+1153   9                        SerialBufferOut[SerialBufferOutPtrTop++] = 0x00;
+1154   9                        for (cntByte=0; cntByte<5; cntByte++)
+1155   9                        {
+1156  10                          SerialBufferOut[SerialBufferOutPtrTop++] = ConsoleMasterSettings[cntByte]&0x7F;
+1157  10                        }
+1158   9                      }
+1159   8                    }
+1160   7                    break;
+1161   7                    case 2:
+1162   7                    { // EEPROM Write
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 20  
+
+1163   8                      unsigned char cntModule;
+1164   8                      unsigned int Address = 0x0000;
+1165   8      
+1166   8                      SetLCD(0,"\x80");
+1167   8                      SetLCD(1,"Saving...");
+1168   8                      WriteData(I2CAddressEEProm, Address, ModuleType, NROFMODULES);
+1169   8                      Address += NROFMODULES;
+1170   8                      for (cntModule=0; cntModule<NROFMODULES; cntModule++)
+1171   8                      {
+1172   9                        WriteData(I2CAddressEEProm, Address, &(ConsoleModuleSettings[cntModule][0]), 29);
+1173   9                        Address += 29;
+1174   9                      }
+1175   8                      WriteData(I2CAddressEEProm, Address, ConsoleMasterSettings, 5);
+1176   8                    }
+1177   7                    break;
+1178   7                    case 3:
+1179   7                    { // SmartCard Load
+1180   8                      unsigned char ReadedModuleType[NROFMODULES];
+1181   8                      unsigned char cntModule;
+1182   8                      unsigned int Address = 0x0000;
+1183   8                      unsigned char DifferentConfiguration=0;
+1184   8      
+1185   8                      ReadData(I2CAddressSmartCard, Address, ReadedModuleType, NROFMODULES);
+1186   8      
+1187   8                      for (cntModule=0; cntModule<NROFMODULES; cntModule++)
+1188   8                      {
+1189   9                        if (ModuleType[cntModule] != ReadedModuleType[cntModule])
+1190   9                        {
+1191  10                          DifferentConfiguration = 1;
+1192  10                        }
+1193   9                      }
+1194   8      
+1195   8                      if (!DifferentConfiguration)
+1196   8                      {
+1197   9                        Address += NROFMODULES;
+1198   9                        for (cntModule=0; cntModule<NROFMODULES; cntModule++)
+1199   9                        {
+1200  10                          ReadData(I2CAddressSmartCard, Address, &(ConsoleModuleSettings[cntModule][0]), 29);
+1201  10                          Address += 29;
+1202  10                        }
+1203   9                        ReadData(I2CAddressSmartCard, Address, ConsoleMasterSettings, 5);
+1204   9      
+1205   9                        {//Reload
+1206  10                          unsigned char cntByte, cntChannel;
+1207  10      
+1208  10                          for (cntChannel=0; cntChannel<16; cntChannel++)
+1209  10                          {
+1210  11                            if ((ModuleType[cntChannel]==0x01) || (ModuleType[cntChannel]==0x02))
+1211  11                            {
+1212  12                              SerialBufferOut[SerialBufferOutPtrTop++] = SERIAL_MODULESETUPDATA;
+1213  12                              SerialBufferOut[SerialBufferOutPtrTop++] = cntChannel;
+1214  12                              for (cntByte=0; cntByte<29; cntByte++)
+1215  12                              {
+1216  13                                ConsoleModuleSettings[cntChannel][cntByte]&=0x01;
+1217  13                                SerialBufferOut[SerialBufferOutPtrTop++] =
+1218  13                                ConsoleModuleSettings[cntChannel][cntByte]&0x7F;
+1219  13                              }
+1220  12                            }
+1221  11                            if ((SerialBufferOutPtrTop != SerialBufferOutPtrBottom) && SendSerialReady)
+1222  11                            {
+1223  12                              S0BUF = SerialBufferOut[SerialBufferOutPtrBottom++];
+1224  12                              SendSerialReady = 0;
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 21  
+
+1225  12                            }
+1226  11                            while(!SendSerialReady);
+1227  11                          }
+1228  10        
+1229  10                          SerialBufferOut[SerialBufferOutPtrTop++] = SERIAL_MASTERSETUPDATA;
+1230  10                          SerialBufferOut[SerialBufferOutPtrTop++] = 0x00;
+1231  10                          for (cntByte=0; cntByte<5; cntByte++)
+1232  10                          {
+1233  11                            SerialBufferOut[SerialBufferOutPtrTop++] = ConsoleMasterSettings[cntByte]&0x7F;
+1234  11                          }
+1235  10                        }
+1236   9                      }
+1237   8                      else
+1238   8                      {
+1239   9                        SetLCD(0,"\xC0");
+1240   9                        SetLCD(1,"Other Config.   ");
+1241   9                        Delay(100);
+1242   9                      }
+1243   8                    }
+1244   7                    break;
+1245   7                    case 4:
+1246   7                    { // SmartCard Write
+1247   8                      unsigned char cntModule;
+1248   8                      unsigned int Address = 0x0000;
+1249   8      
+1250   8                      SetLCD(0,"\x80");
+1251   8                      SetLCD(1,"Saving...");
+1252   8      
+1253   8                      WriteData(I2CAddressSmartCard, Address, ModuleType, NROFMODULES);
+1254   8                      Address += NROFMODULES;
+1255   8                      for (cntModule=0; cntModule<NROFMODULES; cntModule++)
+1256   8                      {
+1257   9                        WriteData(I2CAddressSmartCard, Address, &(ConsoleModuleSettings[cntModule][0]), 29);
+1258   9                        Address += 29;
+1259   9                      }
+1260   8                      WriteData(I2CAddressSmartCard, Address, ConsoleMasterSettings, 5);
+1261   8                    }
+1262   7                    break;
+1263   7                  }
+1264   6                  OperatingMode = NORMALMODE;
+1265   6                  TextStringPtr = 0;
+1266   6      
+1267   6                  SetLCD(0,"\x80");
+1268   6                  SetLCD(1,"                ");
+1269   6                  SetLCD(0,"\xC0");
+1270   6                  SetLCD(1, TextString[TextStringPtr]);
+1271   6      
+1272   6                  TextBuffer[0] = 0x30+(TimeAndDate.Hours/10);
+1273   6                  TextBuffer[1] = 0x30+(TimeAndDate.Hours%10);
+1274   6                  TextBuffer[2] = ':';
+1275   6                  TextBuffer[3] = 0x30+(TimeAndDate.Minutes/10);
+1276   6                  TextBuffer[4] = 0x30+(TimeAndDate.Minutes%10);
+1277   6                  TextBuffer[5] = ':';
+1278   6                  TextBuffer[6] = 0x30+(TimeAndDate.Seconds/10);
+1279   6                  TextBuffer[7] = 0x30+(TimeAndDate.Seconds%10);
+1280   6      /*            TextBuffer[8] = ':';
+1281   6                  TextBuffer[9] = 0x30+(TimeAndDate.Frames/10);
+1282   6                  TextBuffer[10] = 0x30+(TimeAndDate.Frames%10);
+1283   6                  TextBuffer[11] = 0;*/
+1284   6                  TextBuffer[8] = 0;
+1285   6                  SetLCD(0,"\x84");
+1286   6                  SetLCD(1,TextBuffer);
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 22  
+
+1287   6                }
+1288   5                break;
+1289   5                default:
+1290   5                {
+1291   6                  char TextBuffer[9];
+1292   6      
+1293   6                  OperatingMode = NORMALMODE;
+1294   6                  TextStringPtr = 0;
+1295   6      
+1296   6                  SetLCD(0,"\x80");
+1297   6                  SetLCD(1,"                ");
+1298   6                  SetLCD(0,"\xC0");
+1299   6                  SetLCD(1, TextString[TextStringPtr]);
+1300   6      
+1301   6                  TextBuffer[0] = 0x30+(TimeAndDate.Hours/10);
+1302   6                  TextBuffer[1] = 0x30+(TimeAndDate.Hours%10);
+1303   6                  TextBuffer[2] = ':';
+1304   6                  TextBuffer[3] = 0x30+(TimeAndDate.Minutes/10);
+1305   6                  TextBuffer[4] = 0x30+(TimeAndDate.Minutes%10);
+1306   6                  TextBuffer[5] = ':';
+1307   6                  TextBuffer[6] = 0x30+(TimeAndDate.Seconds/10);
+1308   6                  TextBuffer[7] = 0x30+(TimeAndDate.Seconds%10);
+1309   6      /*            TextBuffer[8] = ':';
+1310   6                  TextBuffer[9] = 0x30+(TimeAndDate.Frames/10);
+1311   6                  TextBuffer[10] = 0x30+(TimeAndDate.Frames%10);
+1312   6                  TextBuffer[11] = 0;*/
+1313   6                  TextBuffer[8] = 0;
+1314   6                  SetLCD(0,"\x84");
+1315   6                  SetLCD(1,TextBuffer);
+1316   6                  SetConsoleData();
+1317   6                }
+1318   5                break;
+1319   5              }
+1320   4            }
+1321   3          }
+1322   2          break;
+1323   2          case RIGHT:
+1324   2          {
+1325   3            if (EventOn)
+1326   3            {
+1327   4              switch (OperatingMode)
+1328   4              {
+1329   5                case NORMALMODE:
+1330   5                {
+1331   6                }
+1332   5                break;
+1333   5                case MASTERMODE:
+1334   5                {
+1335   6                  if (ConsoleMasterSettings[4])
+1336   6                  {
+1337   7                    unsigned char cntByte;
+1338   7      
+1339   7                    ConsoleMasterSettings[TextStringPtr] = 1;
+1340   7                    SetLCD(0,"\xC0");
+1341   7                    SetLCD(1,"Yes             ");
+1342   7      
+1343   7                    SerialBufferOut[SerialBufferOutPtrTop++] = SERIAL_MASTERSETUPDATA;
+1344   7                    SerialBufferOut[SerialBufferOutPtrTop++] = 0x00;
+1345   7                    for (cntByte=0; cntByte<5; cntByte++)
+1346   7                    {
+1347   8                      SerialBufferOut[SerialBufferOutPtrTop++] = ConsoleMasterSettings[cntByte]&0x7F;
+1348   8                    }
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 23  
+
+1349   7                  }
+1350   6                }
+1351   5                break;
+1352   5              }
+1353   4            }
+1354   3          }
+1355   2          break;
+1356   2          case UP:
+1357   2          {
+1358   3            if (EventOn)
+1359   3            {   
+1360   4              TextStringPtr--;
+1361   4              switch (OperatingMode)
+1362   4              {
+1363   5                case NORMALMODE:
+1364   5                {
+1365   6                  if (TextStringPtr>3)
+1366   6                    TextStringPtr=3;
+1367   6                  SetLCD(0,"\xC0");         
+1368   6                  SetLCD(1,TextString[TextStringPtr]);
+1369   6                }
+1370   5                break;
+1371   5                case MODULEMODE:
+1372   5                {
+1373   6                  if (TextStringPtr>28)
+1374   6                    TextStringPtr=28;
+1375   6      
+1376   6                  SetLCD(0,"\x80");         
+1377   6                  SetLCD(1,ModuleTextString[TextStringPtr]);
+1378   6                  SetLCD(0,"\xC0");             
+1379   6      //            SetLCD(1,"Select Module   ");
+1380   6                  SetLCD(1,"Toggle by SELECT");
+1381   6                  ShowFunction(TextStringPtr);
+1382   6                }
+1383   5                break;
+1384   5                case MASTERMODE:
+1385   5                {
+1386   6                  if (TextStringPtr>3)
+1387   6                    TextStringPtr=3;
+1388   6                  SetLCD(0,"\x80");                   
+1389   6                  SetLCD(1,MasterTextString[TextStringPtr]);
+1390   6                  SetLCD(0,"\xC0");
+1391   6                  if (ConsoleMasterSettings[TextStringPtr])
+1392   6                  {
+1393   7                    SetLCD(1,"Yes             ");
+1394   7                  }
+1395   6                  else
+1396   6                  {
+1397   7                    SetLCD(1," No             ");
+1398   7                  }
+1399   6                }
+1400   5                break;
+1401   5                case SYSTEMMODE:
+1402   5                {
+1403   6                  if (TextStringPtr>5)
+1404   6                    TextStringPtr=5;
+1405   6      
+1406   6                  if (!CardInserted)
+1407   6                  {
+1408   7                    if (TextStringPtr==4)
+1409   7                      TextStringPtr=2;
+1410   7                  }
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 24  
+
+1411   6                  SetLCD(0,"\x80");                   
+1412   6                  SetLCD(1,SystemTextString[TextStringPtr]);
+1413   6      
+1414   6                  switch (TextStringPtr)
+1415   6                  {
+1416   7                    case 0:
+1417   7                    {
+1418   8                      ShowConfig();
+1419   8                    }
+1420   7                    break;
+1421   7                    case 5:
+1422   7                    {
+1423   8                      SetLCD(0,"\xC0");
+1424   8                      SetLCD(1,IDString);
+1425   8                    }
+1426   7                    break;
+1427   7                    default:
+1428   7                    {
+1429   8                      SetLCD(0,"\xC0");
+1430   8                      SetLCD(1,"Press Enter/Esc ");
+1431   8                    }
+1432   7                    break;
+1433   7                  }
+1434   6                }
+1435   5                break;
+1436   5              }
+1437   4            }
+1438   3          }
+1439   2          break;
+1440   2          case DOWN:
+1441   2          {
+1442   3            if (EventOn)
+1443   3            {
+1444   4              TextStringPtr++;
+1445   4              switch (OperatingMode)
+1446   4              {
+1447   5                case NORMALMODE:
+1448   5                {
+1449   6                  if (TextStringPtr>3)
+1450   6                    TextStringPtr=0;
+1451   6                  SetLCD(0,"\xC0");     
+1452   6                  SetLCD(1,TextString[TextStringPtr]);
+1453   6                }
+1454   5                break;
+1455   5                case MODULEMODE:
+1456   5                {
+1457   6                  if (TextStringPtr>28)
+1458   6                    TextStringPtr=0;
+1459   6      
+1460   6                  SetLCD(0,"\x80");             
+1461   6                  SetLCD(1,ModuleTextString[TextStringPtr]);
+1462   6                  SetLCD(0,"\xC0");             
+1463   6      //            SetLCD(1,"Select Module   ");
+1464   6                  SetLCD(1,"Toggle by SELECT");
+1465   6                  ShowFunction(TextStringPtr);
+1466   6                }
+1467   5                break;
+1468   5                case MASTERMODE:
+1469   5                {
+1470   6                  if (TextStringPtr>3)
+1471   6                    TextStringPtr=0;
+1472   6                  SetLCD(0,"\x80");         
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 25  
+
+1473   6                  SetLCD(1,MasterTextString[TextStringPtr]);
+1474   6                  SetLCD(0,"\xC0");
+1475   6                  if (ConsoleMasterSettings[TextStringPtr])
+1476   6                  {
+1477   7                    SetLCD(1,"Yes             ");
+1478   7                  }
+1479   6                  else
+1480   6                  {
+1481   7                    SetLCD(1," No             ");
+1482   7                  }
+1483   6                }
+1484   5                break;
+1485   5                case SYSTEMMODE:
+1486   5                {
+1487   6                  if (TextStringPtr>5)
+1488   6                    TextStringPtr=0;
+1489   6      
+1490   6                  if (!CardInserted)
+1491   6                  {
+1492   7                    if (TextStringPtr==3)
+1493   7                      TextStringPtr=5;
+1494   7                  }
+1495   6                  SetLCD(0,"\x80");                   
+1496   6                  SetLCD(1,SystemTextString[TextStringPtr]);
+1497   6                  switch (TextStringPtr)
+1498   6                  {
+1499   7                    case 0:
+1500   7                    {
+1501   8                      ShowConfig();
+1502   8                    }
+1503   7                    break;
+1504   7                    case 5:
+1505   7                    {
+1506   8                      SetLCD(0,"\xC0");
+1507   8                      SetLCD(1,IDString);
+1508   8                    }
+1509   7                    break;
+1510   7                    default:
+1511   7                    {
+1512   8                      SetLCD(0,"\xC0");
+1513   8                      SetLCD(1,"Press Enter/Esc ");
+1514   8                    }
+1515   7                    break;
+1516   7                  }
+1517   6                }
+1518   5                break;
+1519   5              }
+1520   4            }
+1521   3          }
+1522   2          break;
+1523   2          case LEFT:
+1524   2          {
+1525   3            if (EventOn)
+1526   3            {
+1527   4              switch (OperatingMode)
+1528   4              {
+1529   5                case NORMALMODE:
+1530   5                {
+1531   6                }
+1532   5                break;
+1533   5                case MASTERMODE:
+1534   5                {
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 26  
+
+1535   6                  if (ConsoleMasterSettings[4])
+1536   6                  {
+1537   7                    unsigned char cntByte;
+1538   7      
+1539   7                    ConsoleMasterSettings[TextStringPtr] = 0;
+1540   7                    SetLCD(0,"\xC0");
+1541   7                    SetLCD(1," No             ");
+1542   7                    switch (TextStringPtr)
+1543   7                    {
+1544   8                      case AUTOCUERESET:
+1545   8                      case CUETOCRM:
+1546   8                      {
+1547   9                        CueControl();
+1548   9                      }
+1549   8                      break;
+1550   8                      case AUTOCOM:
+1551   8                      {
+1552   9                        ConsoleFunctionData[16] &= ANNOUNCER_COMM_FUNCTION_LED^0xFF;
+1553   9                        if ((ModuleData[Module][MIC_RING]&0x80) && (ConsoleModuleSettings[Module][ANNMIC]) && (ConsoleFun
+             -ctionData[Module]&MUTE_FUNCTION) && (ConsoleMasterSettings[AUTOCOM]))
+1554   9                        {
+1555  10                          ConsoleFunctionData[16] |= ANNOUNCER_COMM_FUNCTION_LED;
+1556  10                        }
+1557   9                        CheckTBMic();
+1558   9                        SendSerialData = 1;
+1559   9                      }
+1560   8                      break;
+1561   8                    }
+1562   7        
+1563   7                    SerialBufferOut[SerialBufferOutPtrTop++] = SERIAL_MASTERSETUPDATA;
+1564   7                    SerialBufferOut[SerialBufferOutPtrTop++] = 0x00;
+1565   7                    for (cntByte=0; cntByte<5; cntByte++)
+1566   7                    {
+1567   8                      SerialBufferOut[SerialBufferOutPtrTop++] = ConsoleMasterSettings[cntByte]&0x7F;
+1568   8                    }
+1569   7                  }
+1570   6                }
+1571   5                break;
+1572   5      
+1573   5              }
+1574   4            }
+1575   3          }
+1576   2          break;
+1577   2          case CUERESET:
+1578   2          {
+1579   3            unsigned char cntModule;
+1580   3      
+1581   3            for (cntModule=0; cntModule<NROFMODULES; cntModule++)
+1582   3            {
+1583   4              ConsoleFunctionData[cntModule] &= CUE_LED^0xFF;
+1584   4              ConsoleFunctionData[cntModule] &= CUE_FUNCTION^0xFF;
+1585   4      
+1586   4              if (ModuleType[cntModule] == TELCO)
+1587   4              {
+1588   5                char TelcoNr = GetTelcoNrFromModuleNr(cntModule);
+1589   5                if ((TelcoNr>=0) && (TelcoNr<4))
+1590   5                {
+1591   6                  SerialBufferOut[SerialBufferOutPtrTop++] = TODIRECTOR_TELCO_CUE;
+1592   6                  SerialBufferOut[SerialBufferOutPtrTop++] = TelcoNr;
+1593   6                  SerialBufferOut[SerialBufferOutPtrTop++] = 0x00;
+1594   6                }
+1595   5              }
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 27  
+
+1596   4            }
+1597   3            CueControl();
+1598   3            DJControl();
+1599   3            StudioMicControl();
+1600   3            CheckStartCondition(cntModule);
+1601   3      
+1602   3            SendSerialData = 1;
+1603   3          }
+1604   2          break;
+1605   2          case SW_CC:
+1606   2          {
+1607   3            if (EventOn)
+1608   3            {
+1609   4              ConsoleFunctionData[16] &= NOT_POWER_ON_CC^0xFF;
+1610   4              SetConsoleData();
+1611   4              Delay(5);
+1612   4              CS_CC = 0xFF;
+1613   4              Delay(5);
+1614   4              CardInserted = 1;
+1615   4              SetAddress(I2CAddressSmartCard, 0x00);
+1616   4              if (CardInserted)
+1617   4              {
+1618   5                unsigned int Address;
+1619   5                unsigned char cntByte;
+1620   5      
+1621   5                OperatingMode = SYSTEMMODE;
+1622   5                TextStringPtr = 3;
+1623   5                SetLCD(0,"\x80");
+1624   5                SetLCD(1,SystemTextString[TextStringPtr]);
+1625   5                SetLCD(0,"\xC0");
+1626   5                SetLCD(1,"Press Enter/Esc ");
+1627   5      
+1628   5                SerialBufferOut[SerialBufferOutPtrTop++] = CARD_INSERTED;
+1629   5                SerialBufferOut[SerialBufferOutPtrTop++] = 0x00;
+1630   5                SerialBufferOut[SerialBufferOutPtrTop++] = 0x01;
+1631   5              
+1632   5                TempEnableSetup = ConsoleMasterSettings[4];
+1633   5                Address = NROFMODULES + (NROFMODULES*29) + 4;
+1634   5                ReadData(I2CAddressSmartCard, Address, &(ConsoleMasterSettings[4]), 1);
+1635   5      
+1636   5                SerialBufferOut[SerialBufferOutPtrTop++] = SERIAL_MASTERSETUPDATA;
+1637   5                SerialBufferOut[SerialBufferOutPtrTop++] = 0x00;
+1638   5                for (cntByte=0; cntByte<5; cntByte++)
+1639   5                {
+1640   6                  SerialBufferOut[SerialBufferOutPtrTop++] = ConsoleMasterSettings[cntByte]&0x7F;
+1641   6                }
+1642   5              }
+1643   4              SendSerialData = 1;
+1644   4            }
+1645   3            else
+1646   3            {
+1647   4              unsigned char cntByte;
+1648   4      
+1649   4              CardInserted = 0;
+1650   4      
+1651   4              SerialBufferOut[SerialBufferOutPtrTop++] = CARD_INSERTED;
+1652   4              SerialBufferOut[SerialBufferOutPtrTop++] = 0x00;
+1653   4              SerialBufferOut[SerialBufferOutPtrTop++] = 0x00;
+1654   4      
+1655   4              ConsoleMasterSettings[4] = TempEnableSetup; 
+1656   4      
+1657   4              SerialBufferOut[SerialBufferOutPtrTop++] = SERIAL_MASTERSETUPDATA;
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 28  
+
+1658   4              SerialBufferOut[SerialBufferOutPtrTop++] = 0x00;
+1659   4              for (cntByte=0; cntByte<5; cntByte++)
+1660   4              {
+1661   5                SerialBufferOut[SerialBufferOutPtrTop++] = ConsoleMasterSettings[cntByte]&0x7F;
+1662   5              }
+1663   4      
+1664   4              ConsoleFunctionData[16] |= NOT_POWER_ON_CC;
+1665   4              SendSerialData = 1;
+1666   4              CS_CC = 0x00;
+1667   4              if ((OperatingMode == SYSTEMMODE) && ((TextStringPtr==3) || ((TextStringPtr==4))))
+1668   4              {
+1669   5                char TextBuffer[9];
+1670   5      
+1671   5                OperatingMode = NORMALMODE;
+1672   5                TextStringPtr = 0;
+1673   5      
+1674   5                SetLCD(0,"\x80");
+1675   5                SetLCD(1,"                ");
+1676   5                SetLCD(0,"\xC0");
+1677   5                SetLCD(1, TextString[TextStringPtr]);
+1678   5      
+1679   5                TextBuffer[0] = 0x30+(TimeAndDate.Hours/10);
+1680   5                TextBuffer[1] = 0x30+(TimeAndDate.Hours%10);
+1681   5                TextBuffer[2] = ':';
+1682   5                TextBuffer[3] = 0x30+(TimeAndDate.Minutes/10);
+1683   5                TextBuffer[4] = 0x30+(TimeAndDate.Minutes%10);
+1684   5                TextBuffer[5] = ':';
+1685   5                TextBuffer[6] = 0x30+(TimeAndDate.Seconds/10);
+1686   5                TextBuffer[7] = 0x30+(TimeAndDate.Seconds%10);
+1687   5      /*          TextBuffer[8] = ':';
+1688   5                TextBuffer[9] = 0x30+(TimeAndDate.Frames/10);
+1689   5                TextBuffer[10] = 0x30+(TimeAndDate.Frames%10);
+1690   5                TextBuffer[11] = 0;*/
+1691   5                TextBuffer[8] = 0;
+1692   5                SetLCD(0,"\x84");
+1693   5                SetLCD(1,TextBuffer);
+1694   5              }
+1695   4            }
+1696   3          }
+1697   2          break;
+1698   2          case MUTE:
+1699   2          {
+1700   3            char TelcoNr = GetTelcoNrFromModuleNr(Module);
+1701   3            
+1702   3            if (ConsoleFunctionData[Module]&ON_LED)
+1703   3            {
+1704   4              if (EventOn)
+1705   4              {
+1706   5                  ConsoleFunctionData[Module] |= MUTE_FUNCTION;
+1707   5                  cntMuteFunction[Module] = 0;
+1708   5        
+1709   5                  if ((TelcoNr>=0) && (TelcoNr<4))
+1710   5                  {
+1711   6                    SerialBufferOut[SerialBufferOutPtrTop++] = TODIRECTOR_TELCO_MUTE;
+1712   6                    SerialBufferOut[SerialBufferOutPtrTop++] = TelcoNr;
+1713   6                    SerialBufferOut[SerialBufferOutPtrTop++] = 0x01;
+1714   6                  }
+1715   5        
+1716   5                  SendSerialData = 1;
+1717   5              }
+1718   4              else
+1719   4              {
+C51 COMPILER V9.60.0.0   EVENTS                                                            08/24/2022 00:26:28 PAGE 29  
+
+1720   5                if (cntMuteFunction[Module] == 0)
+1721   5                {
+1722   6                    ConsoleFunctionData[Module] &= MUTE_FUNCTION^0xFF;
+1723   6        
+1724   6                    if ((TelcoNr>=0) && (TelcoNr<4))
+1725   6                    {
+1726   7                      SerialBufferOut[SerialBufferOutPtrTop++] = TODIRECTOR_TELCO_MUTE;
+1727   7                      SerialBufferOut[SerialBufferOutPtrTop++] = TelcoNr;
+1728   7                      SerialBufferOut[SerialBufferOutPtrTop++] = 0x00;
+1729   7                    }
+1730   6                    SendSerialData = 1;
+1731   6                }
+1732   5              }
+1733   4            }
+1734   3          }
+1735   2          break;
+1736   2        }
+1737   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =  11132    ----
+   CONSTANT SIZE    =    135    ----
+   XDATA SIZE       =   ----      33
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

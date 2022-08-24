@@ -1,0 +1,782 @@
+C51 COMPILER V9.60.0.0   I2C                                                               08/24/2022 00:26:27 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE I2C
+OBJECT MODULE PLACED IN .\Objects\I2C.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE I2C.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings
+                    -\I2C.lst) TABS(2) OBJECT(.\Objects\I2C.obj)
+
+line level    source
+
+   1          #include "reg552.h"
+   2          #include "Delay.h"
+   3          #include "LCD.h"
+   4          #include "airlabbrm-willem.h"
+   5          
+   6          unsigned char I2CBufferIn[256];
+   7          unsigned char I2CStatus;
+   8          unsigned char CurrentAddress;
+   9          
+  10          unsigned char I2CBuffer[256];
+  11          unsigned char I2CLength;
+  12          unsigned char I2CDataLength;
+  13          unsigned char I2CRepeat;
+  14          unsigned char I2CRepeatAddress;
+  15          unsigned char I2CByteNr;
+  16          unsigned char I2CFromAddress;
+  17          unsigned char I2CItem;
+  18          unsigned char I2CModule;
+  19          
+  20          unsigned char I2CMasterReciever;
+  21          unsigned char I2CBufferOutPtrTop;
+  22          unsigned char I2CBufferInPtrTop;
+  23          unsigned char I2CBufferInPtrBottom;
+  24          unsigned char I2CBufferOutPtrBottom;
+  25          unsigned char I2CSendReady;
+  26          unsigned char I2CError;
+  27          
+  28          unsigned char I2CAddressBufferOut[256];
+  29          unsigned char I2CDataBufferOut[256];
+  30          
+  31          
+  32          
+  33          
+  34          
+  35          //#ifndef __I2C_H__
+  36          //#define __I2C_H__
+  37          //  I2CBufferInPtrTop = 0;
+  38          //  I2CBufferInPtrBottom = 0;
+  39          //  I2CBufferOutPtrTop = 0;
+  40          //  I2CBufferOutPtrBottom = 0;
+  41          //  I2CSendReady=1;
+  42          //  I2CMasterReciever = 0;
+  43          //  I2CError = 0;
+  44          //  CardInserted = 0;
+  45          //#endif
+  46          
+  47          //void SetAddress(unsigned char I2CAddress, unsigned int StartAddress);
+  48          //void SetupSIO1();
+  49          
+  50          /***************************************************************
+  51          * Setup_I2C                                                    *
+  52          ***************************************************************/
+  53          void SetupSIO1()
+  54          {
+C51 COMPILER V9.60.0.0   I2C                                                               08/24/2022 00:26:27 PAGE 2   
+
+  55   1        
+  56   1        I2CBufferInPtrTop = 0;
+  57   1        I2CBufferInPtrBottom = 0;
+  58   1        I2CBufferOutPtrTop = 0;
+  59   1        I2CBufferOutPtrBottom = 0;
+  60   1        I2CSendReady=1;
+  61   1        I2CMasterReciever = 0;
+  62   1        I2CError = 0;
+  63   1        CardInserted = 0;
+  64   1        
+  65   1      ////    S1ADR = 0xFF;  // Adressregister
+  66   1      
+  67   1      ////  P16 = 1;    // set I2Cports // SCL (P1.6): Serial port clock line I2 C-bus.
+  68   1      ////  P17 = 1;                     // SDA (P1.7): Serial port data line I2 C-bus.
+  69   1      
+  70   1      ////  SI = 0;   // reset Serial Interrupt Flag   
+  71   1      ////  AA = 0;   // disable masterinterrupt    ( = Assert Acknowledge Flag )     
+  72   1      
+  73   1      ////  CR2 = 1;                // set bit-rate for I2C to 200kH   ( = clock Rate Bits )
+  74   1      ////  CR1 = 1;                // set bit-rate for I2C to 200kH   ( = clock Rate Bits )
+  75   1      ////  CR0 = 0;                // set bit-rate for I2C to 200kH   ( = clock Rate Bits )
+  76   1      
+  77   1      ////  ENS1 = 1;   // enable SIO1      ( activate the SIO1 Logic )              
+  78   1      
+  79   1      ////  STA = 0;    // no START flag            
+  80   1      ////  STO = 0;    // no STOP bit
+  81   1      
+  82   1      ////  ES1 = 1;    // IEN0*# Interrupt enable 0 A8H EA EAD ES1 ES0 ET1 EX1 ET0 EX0 00H
+  83   1      ////  PS1 = 1;    // IP0*# Interrupt priority 0 B8H – PAD PS1 PS0 PT1 PX1 PT0 PX0 x0000000B
+  84   1        
+  85   1        
+  86   1        S1ADR = 0xFF;  // Adressregister  ,8 - Bit Special Funktion Register kann mit einer 7 Bit langen Slave Ad
+             -resse geladen werden
+  87   1        // ADDRESS R EGISTER (S1ADR)
+  88   1        // This 8-bit register may be loaded with the 7-bit slave address to which the controller will respond w
+             -hen programmed as
+  89   1        // a slave receiver/transmitter
+  90   1      
+  91   1        P16 = 1;    // set I2Cports // SCL (P1.6): Serial port clock line I2 C-bus.
+  92   1        P17 = 1;                    // SDA (P1.7): Serial port data line I2 C-bus.
+  93   1      
+  94   1        SI = 0;   // reset Serial Interrupt Flag 
+  95   1                    /*  
+  96   1                    This flag is set and an interrupt request is generated, after any of the
+  97   1                    following events occur:
+  98   1                    • A START condition is generated in master mode.
+  99   1                    • The own slave address has been received during AA = 1.
+ 100   1                    • The general call address has been received while GC (bit S1ADR.0) and AA = 1.
+ 101   1                    • A data byte has been received or transmitted in master mode (even if arbitration is lost).
+ 102   1                    • A data byte has been received or transmitted as selected slave.
+ 103   1                    • A STOP or START condition is received as selected slave receiver or transmitter.
+ 104   1                    While the SI flag is set, SCL remains LOW and the serial transfer is suspended. SI must be
+ 105   1                    reset by software.
+ 106   1                    */
+ 107   1      
+ 108   1      
+ 109   1      
+ 110   1        
+ 111   1        AA = 0;   // disable masterinterrupt    ( = Assert Acknowledge Flag ) 
+ 112   1      
+ 113   1                    /*
+ 114   1                    When this bit is set, an acknowledge is returned after any one of the
+C51 COMPILER V9.60.0.0   I2C                                                               08/24/2022 00:26:27 PAGE 3   
+
+ 115   1                    following conditions:
+ 116   1                    • Own slave address is received.
+ 117   1                    • General call address is received; GC (bit S1ADR.0) = 1.
+ 118   1                    • A data byte is received, while the device is programmed to be a master receiver.
+ 119   1                    • A data byte is received. while the device is a selected slave receiver.
+ 120   1                    When the bit is reset, no acknowledge is returned. Consequently, no interrupt is requested when
+ 121   1                    the own address or general call address is received.
+ 122   1                    */  
+ 123   1      
+ 124   1        CR2 = 1;                // set bit-rate for I2C to 200kH   ( = clock Rate Bits )
+ 125   1        CR1 = 1;                // set bit-rate for I2C to 200kH   ( = clock Rate Bits )
+ 126   1        CR0 = 0;                // set bit-rate for I2C to 200kH   ( = clock Rate Bits )
+ 127   1      /*  
+ 128   1      
+ 129   1      CR2   CR1   CR0       BIT RATE (kbits/s) at fclk
+ 130   1                            12 MHz    16 MHz
+ 131   1      1       0     0       50        66.7
+ 132   1      1       0     1       3.75      5
+ 133   1      1       1     0       75        100
+ 134   1      1       1     1       100        -
+ 135   1      0       0     0       200       266.7
+ 136   1      0       0     1       7.5       10
+ 137   1      0       1     0       300       400(1)
+ 138   1      0       1     1       400        -
+ 139   1      */
+ 140   1      
+ 141   1        ENS1 = 1;   // enable SIO1      ( activate the SIO1 Logic  , ENS1 = 1: serial I/O enabled)              
+ 142   1      
+ 143   1        STA = 0;    // no START flag    //When this bit is set in slave mode, the hardware checks the I2C-bus and g
+             -enerates
+ 144   1                                        //a START condition if the bus is free or after the bus becomes free. If the device opera
+             -tes in
+ 145   1                                        //master mode it will generate a repeated START condition 
+ 146   1      
+ 147   1                                        
+ 148   1        STO = 0;    // no STOP bit  //If this bit is set in a master mode a STOP condition is generated. A STOP c
+             -ondition
+ 149   1                                    //detected on the I2C-bus clears this bit. This bit may also be set in slave
+             - mode in order to recover
+ 150   1                                    //from an error condition. In this case no STOP condition is generated to th
+             -e I2 C-bus, but the hard
+ 151   1                                    //ware releases the SDA and SCL lines and switches to the not selected recei
+             -ver mode. The
+ 152   1                                    //STOP flag is cleared by the hardware
+ 153   1      
+ 154   1        ES1 = 1;    // Enable SIO1 (I2 C-bus) interrupt.
+ 155   1        PS1 = 1;    // SIO1 (I2C-bus) interrupt priority level
+ 156   1      }
+ 157          
+ 158          
+ 159          void SetAddress(unsigned char I2CAddress, unsigned int StartAddress)
+ 160          {
+ 161   1        
+ 162   1      
+ 163   1        
+ 164   1        unsigned char Address = I2CAddress | ((StartAddress>>7)&0x0E);
+ 165   1        
+ 166   1        
+ 167   1          
+ 168   1        //  I2CBufferInPtrTop = 0;
+ 169   1        //I2CBufferInPtrBottom = 0;
+ 170   1        I2CBufferOutPtrTop = 0;
+C51 COMPILER V9.60.0.0   I2C                                                               08/24/2022 00:26:27 PAGE 4   
+
+ 171   1        I2CBufferOutPtrBottom = 0;
+ 172   1        I2CSendReady=1;
+ 173   1        //I2CMasterReciever = 0;
+ 174   1        I2CError = 0;
+ 175   1        CardInserted = 0;
+ 176   1      
+ 177   1        I2CAddressBufferOut[I2CBufferOutPtrTop] = Address;
+ 178   1        I2CDataBufferOut[I2CBufferOutPtrTop++] = StartAddress&0xFF;
+ 179   1        
+ 180   1        EA = 0;  // EA=IE0....7 (Interrupt Enable) Register  EA   IE.7  It disables all interrupts. When EA = 0 no
+             - interrupt will be acknowledged and EA = 1 enables the interrupt individually.
+ 181   1                  //-   IE.6  Reserved for future use.
+ 182   1                  //-   IE.5  Reserved for future use.
+ 183   1                  //ES  IE.4  Enables/disables serial port interrupt.
+ 184   1                  //ET1   IE.3  Enables/disables timer1 overflow interrupt.
+ 185   1                  //EX1   IE.2  Enables/disables external interrupt1.
+ 186   1                  //ET0   IE.1  Enables/disables timer0 overflow interrupt.
+ 187   1                  //EX0   IE.0  Enables/disables external interrupt0.
+ 188   1        
+ 189   1        if ((I2CBufferOutPtrTop != I2CBufferOutPtrBottom) && I2CSendReady)
+ 190   1        {
+ 191   2          I2CSendReady=0;
+ 192   2          EA = 1;
+ 193   2          STA = 0;    // no START flag    //When this bit is set in slave mode, the hardware checks the I2C-bus and
+             - generates
+ 194   2                                        //a START condition if the bus is free or after the bus becomes free. If the device opera
+             -tes in
+ 195   2                                        //master mode it will generate a repeated START condition 
+ 196   2        }
+ 197   1        EA = 1;
+ 198   1        while (!I2CSendReady);
+ 199   1        Delay(1);
+ 200   1      
+ 201   1        if (I2CError)
+ 202   1        {
+ 203   2          SetLCD(0,"\xC0");
+ 204   2          if (I2CAddress==I2CAddressSmartCard)
+ 205   2          {
+ 206   3            CardInserted = 0;
+ 207   3            //SerialBufferOut[SerialBufferOutPtrTop++] = CARD_INSERTED;
+ 208   3            //SerialBufferOut[SerialBufferOutPtrTop++] = 0x00;
+ 209   3            //SerialBufferOut[SerialBufferOutPtrTop++] = 0x00;
+ 210   3          }
+ 211   2          else
+ 212   2            SetLCD(1,"No EEPROM comm. ");
+ 213   2      
+ 214   2          I2CError = 0;
+ 215   2        }
+ 216   1      }
+ 217          
+ 218          
+ 219          /***************************************************************
+ 220          * READ_DATA_I2C                                                    *
+ 221          ***************************************************************/
+ 222          void ReadData(unsigned char I2CAddress, unsigned int StartAddress, unsigned char *Buffer, unsigned char Nr
+             -OfBytes)
+ 223          {
+ 224   1        unsigned char cnt;
+ 225   1        unsigned char Address = I2CAddress | ((StartAddress>>7)&0x0E) |0x01;
+ 226   1        
+ 227   1        
+ 228   1          
+C51 COMPILER V9.60.0.0   I2C                                                               08/24/2022 00:26:27 PAGE 5   
+
+ 229   1          I2CBufferInPtrTop = 0;
+ 230   1        I2CBufferInPtrBottom = 0;
+ 231   1        I2CBufferOutPtrTop = 0;
+ 232   1        //I2CBufferOutPtrBottom = 0;
+ 233   1        I2CSendReady=1;
+ 234   1        I2CMasterReciever = 0;
+ 235   1        //I2CError = 0;
+ 236   1        //CardInserted = 0;
+ 237   1      
+ 238   1        SetAddress(I2CAddress, StartAddress);
+ 239   1      
+ 240   1        I2CMasterReciever = 1;
+ 241   1        I2CDataLength = NrOfBytes;
+ 242   1        I2CAddressBufferOut[I2CBufferOutPtrTop++] = Address;
+ 243   1        EA = 0;
+ 244   1      
+ 245   1        if (I2CSendReady)
+ 246   1        {
+ 247   2          I2CSendReady=0;
+ 248   2          EA = 1;
+ 249   2          STA = 1;  // ????
+ 250   2        }
+ 251   1        EA = 1;
+ 252   1      
+ 253   1        while(!I2CSendReady);
+ 254   1        I2CMasterReciever = 0;
+ 255   1      
+ 256   1        cnt = 0;
+ 257   1        while ((I2CBufferInPtrTop != I2CBufferInPtrBottom))
+ 258   1        {
+ 259   2          unsigned char Dummy = I2CBufferIn[I2CBufferInPtrBottom++];
+ 260   2          if (cnt<NrOfBytes)
+ 261   2            Buffer[cnt++] = Dummy;
+ 262   2        }
+ 263   1      }
+ 264          
+ 265          
+ 266          /***************************************************************
+ 267          * WRITE_DATA_I2C                                                    *
+ 268          ***************************************************************/
+ 269          void WriteData(unsigned char I2CAddress, unsigned int StartAddress, unsigned char *Buffer, unsigned char N
+             -rOfBytes)
+ 270          {
+ 271   1        unsigned char cntByte = 0;
+ 272   1        unsigned char Address = I2CAddress | ((StartAddress>>7)&0x0E);
+ 273   1      
+ 274   1        while (cntByte<NrOfBytes)
+ 275   1        {
+ 276   2          // Watchdog
+ 277   2          PCON |= 0x10;
+ 278   2          T3 = 0;
+ 279   2      
+ 280   2          I2CAddressBufferOut[I2CBufferOutPtrTop] = Address;
+ 281   2          I2CDataBufferOut[I2CBufferOutPtrTop++] = StartAddress&0xFF;
+ 282   2          I2CAddressBufferOut[I2CBufferOutPtrTop] = Address;
+ 283   2          I2CDataBufferOut[I2CBufferOutPtrTop++] = Buffer[cntByte];
+ 284   2          StartAddress++;
+ 285   2          cntByte++;
+ 286   2      
+ 287   2          while ((cntByte<NrOfBytes) && (StartAddress&0x000F))
+ 288   2          {
+ 289   3            I2CAddressBufferOut[I2CBufferOutPtrTop] = Address;
+C51 COMPILER V9.60.0.0   I2C                                                               08/24/2022 00:26:27 PAGE 6   
+
+ 290   3            I2CDataBufferOut[I2CBufferOutPtrTop++] = Buffer[cntByte];
+ 291   3            StartAddress++;
+ 292   3            cntByte++;
+ 293   3          }
+ 294   2      
+ 295   2          EA = 0;
+ 296   2          if ((I2CBufferOutPtrTop != I2CBufferOutPtrBottom) && I2CSendReady)
+ 297   2          {
+ 298   3            I2CSendReady=0;
+ 299   3            EA = 1;
+ 300   3            STA = 1;
+ 301   3          }
+ 302   2          EA = 1;
+ 303   2      
+ 304   2          while (!I2CSendReady);
+ 305   2      
+ 306   2          Address = I2CAddress | ((StartAddress>>7)&0x0E);
+ 307   2      
+ 308   2          Delay(1);
+ 309   2        }
+ 310   1      }
+ 311          
+ 312          
+ 313          
+ 314          /************************************************************************
+ 315          *       Interrupt on recieving I2C                                                                        
+             -                                              *
+ 316          ************************************************************************/
+ 317          void Int_I2C(void) interrupt 5 using 3 
+ 318          {
+ 319   1        unsigned char Status = S1STA;   // S1STAT ( dem SIO1 Status Register )
+ 320   1        unsigned char Data = S1DAT;   // S1DAT ( dem SIO1 Daten Register )
+ 321   1        
+ 322   1        
+ 323   1          
+ 324   1          I2CBufferInPtrTop = 0;
+ 325   1        //I2CBufferInPtrBottom = 0;
+ 326   1        I2CBufferOutPtrTop = 0;
+ 327   1        I2CBufferOutPtrBottom = 0;
+ 328   1        I2CSendReady=1;
+ 329   1        I2CMasterReciever = 0;
+ 330   1        I2CError = 0;
+ 331   1        //CardInserted = 0;
+ 332   1      
+ 333   1        I2CStatus = Status;
+ 334   1      
+ 335   1        switch (Status)
+ 336   1        {
+ 337   2          case 0x08:
+ 338   2          { /*  A START Condition has been transmitted */
+ 339   3            if (I2CBufferOutPtrTop != I2CBufferOutPtrBottom)
+ 340   3            {
+ 341   4              S1DAT = CurrentAddress = I2CAddressBufferOut[I2CBufferOutPtrBottom];
+ 342   4              if (I2CMasterReciever)
+ 343   4                I2CBufferOutPtrBottom++;
+ 344   4            }
+ 345   3            STO = 0;
+ 346   3      
+ 347   3            if (I2CRepeatAddress != CurrentAddress)
+ 348   3            {
+ 349   4              I2CRepeat = 0;
+ 350   4              I2CRepeatAddress = CurrentAddress;
+C51 COMPILER V9.60.0.0   I2C                                                               08/24/2022 00:26:27 PAGE 7   
+
+ 351   4            }
+ 352   3          }
+ 353   2          break;
+ 354   2          case 0x10:
+ 355   2          { /*  A repeated START Condition has been transmitted */
+ 356   3            STO = 0;
+ 357   3            S1DAT = CurrentAddress = I2CAddressBufferOut[I2CBufferOutPtrBottom];
+ 358   3            if (I2CRepeatAddress != CurrentAddress)
+ 359   3            {
+ 360   4              I2CRepeat = 0;
+ 361   4              I2CRepeatAddress = CurrentAddress;
+ 362   4            }
+ 363   3          }
+ 364   2          break;
+ 365   2          case 0x18:
+ 366   2          { /*  SLA+W has been transmitted; ACK has been recieved */
+ 367   3            if (I2CBufferOutPtrTop != I2CBufferOutPtrBottom)
+ 368   3            {
+ 369   4              STA = 0;
+ 370   4              STO = 0;
+ 371   4              S1DAT = I2CDataBufferOut[I2CBufferOutPtrBottom];
+ 372   4            }
+ 373   3            else
+ 374   3            {
+ 375   4              STA = 0;
+ 376   4              STO = 1;
+ 377   4              AA = 1;
+ 378   4              I2CSendReady = 1;
+ 379   4            }
+ 380   3            I2CRepeat = 0;
+ 381   3          }
+ 382   2          break;
+ 383   2          case 0x20:
+ 384   2          { /*  SLA+W has been transmitted; NOT ACK has been recieved */
+ 385   3            I2CRepeat++;
+ 386   3            if (I2CRepeat > 10)
+ 387   3            {
+ 388   4              STA = 0;
+ 389   4              STO = 1;
+ 390   4              AA = 1;
+ 391   4              I2CSendReady = 1;
+ 392   4              I2CError = 1;
+ 393   4              while ((I2CBufferOutPtrBottom!=I2CBufferOutPtrTop) && (I2CRepeatAddress == I2CAddressBufferOut[I2CBuff
+             -erOutPtrBottom]))
+ 394   4              {
+ 395   5                I2CBufferOutPtrBottom++;
+ 396   5              }
+ 397   4            }
+ 398   3            else
+ 399   3            {
+ 400   4              STA = 1;
+ 401   4              STO = 0;
+ 402   4              AA = 1;
+ 403   4            }
+ 404   3          }
+ 405   2          break;
+ 406   2          case 0x28:
+ 407   2          { /*  Data byte in S1DAT has been transmitted; ACK has been recieved */
+ 408   3            I2CBufferOutPtrBottom++;
+ 409   3            if ((I2CBufferOutPtrTop != I2CBufferOutPtrBottom) && (I2CAddressBufferOut[I2CBufferOutPtrBottom] == Cur
+             -rentAddress))
+ 410   3            {
+C51 COMPILER V9.60.0.0   I2C                                                               08/24/2022 00:26:27 PAGE 8   
+
+ 411   4              STA = 0;
+ 412   4              STO = 0;
+ 413   4              S1DAT = I2CDataBufferOut[I2CBufferOutPtrBottom];
+ 414   4            }
+ 415   3            else
+ 416   3            {
+ 417   4              STA = 0;
+ 418   4              STO = 1;
+ 419   4              AA = 1;
+ 420   4              I2CSendReady = 1;
+ 421   4            }
+ 422   3            I2CRepeat = 0;
+ 423   3          }
+ 424   2          break;
+ 425   2          case 0x30:
+ 426   2          { /*  Data byte in S1DAT has been transmitted; NOT ACK has been recieved */
+ 427   3            STA = 1;
+ 428   3            STO = 0;
+ 429   3            I2CRepeat++;
+ 430   3            if (I2CRepeat > 10)
+ 431   3            {
+ 432   4              while ((I2CBufferOutPtrBottom!=I2CBufferOutPtrTop) && (I2CRepeatAddress == I2CAddressBufferOut[I2CBuff
+             -erOutPtrBottom]))
+ 433   4              {
+ 434   5                I2CBufferOutPtrBottom++;
+ 435   5              }
+ 436   4            }
+ 437   3          }
+ 438   2          break;
+ 439   2          case 0x38:
+ 440   2          { /* Arbitration lost in SLA+R/W or databytes */
+ 441   3            STA = 1;
+ 442   3            STO = 0;
+ 443   3            I2CRepeat++;
+ 444   3            if (I2CRepeat > 10)
+ 445   3            {
+ 446   4              while ((I2CBufferOutPtrBottom!=I2CBufferOutPtrTop) && (I2CRepeatAddress == I2CAddressBufferOut[I2CBuff
+             -erOutPtrBottom]))
+ 447   4              {
+ 448   5                I2CBufferOutPtrBottom++;
+ 449   5              }
+ 450   4            }
+ 451   3          }
+ 452   2          break;
+ 453   2          case 0x40:
+ 454   2          { /* SLA+R has been transmitted; ACK has been recieved */
+ 455   3            STA = 0;
+ 456   3            STO = 0;
+ 457   3      
+ 458   3            I2CByteNr = 0;
+ 459   3            if (I2CDataLength<2)
+ 460   3              AA = 0;
+ 461   3            else
+ 462   3              AA = 1;
+ 463   3          }
+ 464   2          break;
+ 465   2          case 0x48:
+ 466   2          { /* SLA+R has been transmitted; NOT ACK has been recieved */
+ 467   3            STA = 0;
+ 468   3            STO = 1;
+ 469   3            AA = 1;
+ 470   3            I2CSendReady = 1;
+C51 COMPILER V9.60.0.0   I2C                                                               08/24/2022 00:26:27 PAGE 9   
+
+ 471   3          }
+ 472   2          break;
+ 473   2          case 0x50:
+ 474   2          { /* Data byte has been recieved; ACK has been returned */
+ 475   3            I2CBuffer[I2CByteNr++] = Data;
+ 476   3      
+ 477   3            STA = 0;
+ 478   3            STO = 0;
+ 479   3            if (I2CByteNr>(I2CDataLength-1))
+ 480   3              AA = 0;
+ 481   3            else
+ 482   3              AA = 1;
+ 483   3          }
+ 484   2          break;
+ 485   2          case 0x58:
+ 486   2          { /* Data byte has been recieved; NOT ACK has been returned */
+ 487   3            unsigned char cnt = 0;
+ 488   3      
+ 489   3            while (cnt < I2CByteNr)
+ 490   3            {
+ 491   4              I2CBufferIn[I2CBufferInPtrTop++] = I2CBuffer[cnt];
+ 492   4              cnt++;
+ 493   4            }
+ 494   3            I2CBufferIn[I2CBufferInPtrTop++] = Data;
+ 495   3      
+ 496   3            I2CByteNr = 0;
+ 497   3            STA = 0;
+ 498   3            STO = 1;
+ 499   3            I2CSendReady = 1;
+ 500   3          }
+ 501   2          break;
+ 502   2          case 0x60:
+ 503   2          { /* Own SLA+W has been revieved; ACK has been returned */
+ 504   3            STO = 0;
+ 505   3            AA = 1;
+ 506   3            I2CSendReady = 1;
+ 507   3            I2CByteNr = 0;
+ 508   3          }
+ 509   2          break;
+ 510   2          case 0x68:
+ 511   2          { /* Arbitration lost in SLA+R/W as master; Own SLA+W has been recieved, ACK returned */
+ 512   3            STO = 0;
+ 513   3            AA = 1;
+ 514   3            I2CSendReady = 1;
+ 515   3            I2CByteNr = 0;
+ 516   3          }
+ 517   2          break;
+ 518   2          case 0x70:
+ 519   2          { /* General call address (00H) has been recieved; ACK has been returned */
+ 520   3            STO = 0;
+ 521   3            AA = 1;
+ 522   3            I2CSendReady = 1;
+ 523   3            I2CByteNr = 0;
+ 524   3          }
+ 525   2          break;
+ 526   2          case 0x78:
+ 527   2          { /*  Arbitration lost in SLA+R/W as master; Generall call has been recieved; ACK has been returned */
+ 528   3            STO = 0;
+ 529   3            AA = 1;
+ 530   3            I2CSendReady = 1;
+ 531   3            I2CByteNr = 0;
+ 532   3          }
+C51 COMPILER V9.60.0.0   I2C                                                               08/24/2022 00:26:27 PAGE 10  
+
+ 533   2          break;
+ 534   2          case 0x80:
+ 535   2          { /* Previously addressed with own SLV adress; Data has been received; ACK has been returned */
+ 536   3            switch (I2CByteNr)
+ 537   3            {
+ 538   4              case 0:
+ 539   4              {
+ 540   5                I2CFromAddress = Data;
+ 541   5                I2CByteNr++;
+ 542   5              }
+ 543   4              break;
+ 544   4              case 1:
+ 545   4              {
+ 546   5                I2CItem = Data;
+ 547   5                switch (I2CItem)
+ 548   5                {
+ 549   6                  default:
+ 550   6                  {
+ 551   7                    I2CLength = 3;
+ 552   7                  }
+ 553   6                }
+ 554   5                I2CByteNr++;
+ 555   5              }
+ 556   4              break;
+ 557   4              case 2:
+ 558   4              {
+ 559   5                I2CModule = Data;
+ 560   5                I2CByteNr++;
+ 561   5              }
+ 562   4              break;
+ 563   4              default:
+ 564   4              {
+ 565   5                I2CBuffer[I2CByteNr++] = Data;
+ 566   5                if (I2CByteNr > I2CLength)
+ 567   5                {
+ 568   6                  unsigned char cnt = 3;
+ 569   6                  I2CBufferIn[I2CBufferInPtrTop++] = I2CFromAddress;
+ 570   6                  I2CBufferIn[I2CBufferInPtrTop++] = I2CItem;
+ 571   6                  I2CBufferIn[I2CBufferInPtrTop++] = I2CModule;
+ 572   6                  while (cnt < I2CByteNr)
+ 573   6                  {
+ 574   7                    I2CBufferIn[I2CBufferInPtrTop++] = I2CBuffer[cnt];
+ 575   7                    cnt++;
+ 576   7                  }
+ 577   6                  I2CByteNr = 0;
+ 578   6                }
+ 579   5              }
+ 580   4              break;
+ 581   4            }
+ 582   3            STO = 0;
+ 583   3            AA = 1;
+ 584   3            I2CSendReady = 1;
+ 585   3          }
+ 586   2          break;
+ 587   2          case 0x88:
+ 588   2          { /* Previously addressed with own SLA; Data has been received; NOT ACK has been returned */
+ 589   3            STA = 0;
+ 590   3            STO = 0;
+ 591   3            AA = 1;
+ 592   3            I2CSendReady = 1;
+ 593   3      
+ 594   3          }
+C51 COMPILER V9.60.0.0   I2C                                                               08/24/2022 00:26:27 PAGE 11  
+
+ 595   2          break;
+ 596   2          case 0x90:
+ 597   2          { /*  Previously addressed with General Call;Data byte has been recieved; ACK has been recieved */
+ 598   3            switch (I2CByteNr)
+ 599   3            {
+ 600   4              case 0:
+ 601   4              {
+ 602   5                I2CFromAddress = Data;
+ 603   5                I2CByteNr++;
+ 604   5              }
+ 605   4              break;
+ 606   4              case 1:
+ 607   4              {
+ 608   5                I2CItem = Data;
+ 609   5                switch (I2CItem)
+ 610   5                {
+ 611   6                  default:
+ 612   6                  {
+ 613   7                    I2CLength = 3;
+ 614   7                  }
+ 615   6                }
+ 616   5                I2CByteNr++;
+ 617   5              }
+ 618   4              break;
+ 619   4              case 2:
+ 620   4              {
+ 621   5                I2CModule = Data;
+ 622   5                I2CByteNr++;
+ 623   5              }
+ 624   4              break;
+ 625   4              default:
+ 626   4              {
+ 627   5                I2CBuffer[I2CByteNr++] = Data;
+ 628   5                if (I2CByteNr > I2CLength) 
+ 629   5                {
+ 630   6                  unsigned char cnt = 3;
+ 631   6                  I2CBufferIn[I2CBufferInPtrTop++] = I2CFromAddress;
+ 632   6                  I2CBufferIn[I2CBufferInPtrTop++] = I2CItem;
+ 633   6                  I2CBufferIn[I2CBufferInPtrTop++] = I2CModule;
+ 634   6                  while (cnt < I2CByteNr)
+ 635   6                  {
+ 636   7                    I2CBufferIn[I2CBufferInPtrTop++] = I2CBuffer[cnt];
+ 637   7                    cnt++;
+ 638   7                  }
+ 639   6                }
+ 640   5                I2CByteNr = 0;
+ 641   5              }
+ 642   4              break;
+ 643   4            }
+ 644   3            STO = 0;
+ 645   3            AA = 1;
+ 646   3            I2CSendReady = 1;
+ 647   3          }
+ 648   2          break;
+ 649   2          case 0x98:
+ 650   2          { /* Previously addressed with General Call;Data byte has been recieved; NOT ACK has been returned */
+ 651   3            STA = 0;
+ 652   3            STO = 0;
+ 653   3            AA = 1;
+ 654   3            I2CSendReady = 1;
+ 655   3          }
+ 656   2          break;
+C51 COMPILER V9.60.0.0   I2C                                                               08/24/2022 00:26:27 PAGE 12  
+
+ 657   2          case 0xA0:
+ 658   2          { /*  A STOP condition or repeated START condition has been recieved while still addressed as SLV/REC or 
+             -SLV/TRX */
+ 659   3            STA = 0;
+ 660   3            STO = 0;
+ 661   3            AA = 1;
+ 662   3            I2CSendReady = 1;
+ 663   3          }
+ 664   2          break;
+ 665   2          case 0xA8:
+ 666   2          { /*  Own SLA+R has been recieved; ACK has been returned */
+ 667   3            STO = 0;
+ 668   3            AA = 1;
+ 669   3            I2CSendReady = 1;
+ 670   3          }
+ 671   2          break;
+ 672   2          case 0xB0:
+ 673   2          { /*  Arbitration lost in SLA+R/W as master; own SLA+R has been recieved; ACK has been returned */
+ 674   3            STO = 0;
+ 675   3            AA = 1;
+ 676   3            I2CSendReady = 1;
+ 677   3          }
+ 678   2          break;
+ 679   2          case 0xB8:
+ 680   2          { /*  Data byte in S1DAT has been transmitted; ACK has been recieved */
+ 681   3            STO = 0;
+ 682   3            AA = 1;
+ 683   3            I2CSendReady = 1;
+ 684   3          }
+ 685   2          break;
+ 686   2          case 0xC0:
+ 687   2          { /*  Data byte in S1DAT has been transmitted; NOT ACK has been recieved */
+ 688   3            STA = 0;
+ 689   3            STO = 0;
+ 690   3            AA = 1;
+ 691   3            I2CSendReady = 1;
+ 692   3          }
+ 693   2          break;
+ 694   2          case 0xC8:
+ 695   2          { /* Last data byte in S1DAT has been transmitted (AA=0); ACK has been recieved */
+ 696   3            STA = 0;
+ 697   3            STO = 0;
+ 698   3            AA = 1;
+ 699   3            I2CSendReady = 1;
+ 700   3          }
+ 701   2          break;
+ 702   2          case 0xF8:
+ 703   2          { /* No relevant state information available; S1 = 0 */
+ 704   3          }
+ 705   2          break;
+ 706   2          case 0x00:
+ 707   2          { /* Bus error */
+ 708   3            STA = 0;
+ 709   3            STO = 1;
+ 710   3            I2CSendReady = 1;
+ 711   3          }
+ 712   2          break;
+ 713   2        }
+ 714   1        SI = 0;
+ 715   1      }
+
+
+C51 COMPILER V9.60.0.0   I2C                                                               08/24/2022 00:26:27 PAGE 13  
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   2089    ----
+   CONSTANT SIZE    =     19    ----
+   XDATA SIZE       =   1041      20
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

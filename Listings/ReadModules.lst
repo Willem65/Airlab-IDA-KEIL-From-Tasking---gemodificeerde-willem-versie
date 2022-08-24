@@ -1,0 +1,187 @@
+C51 COMPILER V9.60.0.0   READMODULES                                                       08/24/2022 00:26:27 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE READMODULES
+OBJECT MODULE PLACED IN .\Objects\ReadModules.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE ReadModules.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\
+                    -Listings\ReadModules.lst) TABS(2) OBJECT(.\Objects\ReadModules.obj)
+
+line level    source
+
+   1          #include <stdio.h>
+   2          #include "reg552.h"
+   3          #include "ReadModules.h"
+   4          #include "airlabbrm-willem.h"
+   5          #include "LCD.h"
+   6          #include "Delay.h"
+   7          
+   8            unsigned char Bits;
+   9          
+  10          void ReadConsole()
+  11          {
+  12   1        ReadMasterSwitches();
+  13   1        ReadModuleSwitches(MODULE1_8);    // 0
+  14   1        ReadModuleSwitches(MODULE9_16);   // 1
+  15   1      }
+  16          
+  17          void ReadMasterSwitches()
+  18          {
+  19   1        unsigned char cntByte;
+  20   1      
+  21   1        P10 = 0; //read master
+  22   1        P11 = 0; 
+  23   1        P12 = 0; 
+  24   1        P13 = 0; 
+  25   1        P14 = 1; 
+  26   1      
+  27   1        for (Wait=0; Wait<SET_SWITCH_WAIT; Wait++);
+  28   1      
+  29   1        for (cntByte=0; cntByte<8; cntByte++)
+  30   1        {
+  31   2          // If bit set and switch isn't ON send event is necessery, else reset counter
+  32   2          unsigned char Bits = P5;
+  33   2          if ((!(Bits&(0x01<<cntByte))) && (!(MasterData[cntByte]&0x80)))
+  34   2          {
+  35   3            if ((--MasterData[cntByte])&0x80)
+  36   3            {
+  37   4              EventBuffer[EventBufferPtrTop++] = 0x80 | cntByte;
+  38   4            }
+  39   3          }
+  40   2          else if ((Bits&(0x01<<cntByte))&& (MasterData[cntByte]&0x80))
+  41   2          {
+  42   3            MasterData[cntByte]=ATTACK;
+  43   3            EventBuffer[EventBufferPtrTop++] = 0x180 | cntByte;
+  44   3          }
+  45   2        }
+  46   1      }
+  47          
+  48          
+  49          
+  50          
+  51          void ReadModuleSwitches(unsigned char High)
+  52          {
+  53   1        unsigned char cntByte;
+  54   1        unsigned char cntModule;
+C51 COMPILER V9.60.0.0   READMODULES                                                       08/24/2022 00:26:27 PAGE 2   
+
+  55   1      //  unsigned char str[8];
+  56   1        unsigned char Bits;
+  57   1        
+  58   1      
+  59   1        P13 = High;  // AS3
+  60   1        P14 = 0;     // AS4   Not read master
+  61   1      
+  62   1        for (cntByte=0; cntByte<8; cntByte++)
+  63   1        {
+  64   2          for (cntModule=0; cntModule<8; cntModule++)
+  65   2          {
+  66   3            //unsigned char Bits;
+  67   3      
+  68   3            // Select switch to read
+  69   3            P10 = cntByte&0x01;   // AS0
+  70   3            P11 = cntByte&0x02;   // AS1
+  71   3            P12 = cntByte&0x04;   // AS2
+  72   3            
+  73   3      //      P10 = 1; 
+  74   3      //      P11 = 1; 
+  75   3      //      P12 = 0; 
+  76   3      //      P13 = 1; 
+  77   3      //      P14 = 0; 
+  78   3            
+  79   3      
+  80   3            for (Wait=0; Wait<SET_SWITCH_WAIT; Wait++);
+  81   3      
+  82   3            // If bit set and switch isn't ON send event is necessery, else reset counter
+  83   3            Bits = P5;
+  84   3            
+  85   3            //S0BUF = 0x31;
+  86   3      
+  87   3            
+  88   3            
+  89   3            if ((!(Bits&(0x01<<cntModule))) && (!(ModuleData[cntModule+(8*High)][cntByte]&0x80)))
+  90   3            {
+  91   4              if ((--ModuleData[cntModule+(8*High)][cntByte])&0x80)
+  92   4              {
+  93   5                EventBuffer[EventBufferPtrTop++] = ((cntModule+(8*High))<<3) | cntByte;
+  94   5              }
+  95   4            }
+  96   3            else if ((Bits&(0x01<<cntModule)) && (ModuleData[cntModule+(8*High)][cntByte]&0x80))
+  97   3            {
+  98   4              ModuleData[cntModule+(8*High)][cntByte]=ATTACK;
+  99   4              EventBuffer[EventBufferPtrTop++] = 0x100 | ((cntModule+(8*High))<<3) | cntByte;
+ 100   4            }
+ 101   3          }
+ 102   2        }
+ 103   1        
+ 104   1        
+ 105   1        
+ 106   1      //            SetLCD(0,"\xC0");
+ 107   1      //          
+ 108   1      //          // -------------------------
+ 109   1      //          // ----- int 2 string ------
+ 110   1      //          //--------------------------
+ 111   1      
+ 112   1      //          
+ 113   1      //          sprintf(str, "%d  ", ModuleData[2][0]);
+ 114   1      //          // ------------------------------------
+ 115   1      //          
+ 116   1      //          SetLCD(1,str);
+C51 COMPILER V9.60.0.0   READMODULES                                                       08/24/2022 00:26:27 PAGE 3   
+
+ 117   1      //          //Delay(10);
+ 118   1      }
+ 119          
+ 120          
+ 121          
+ 122          void ShowConfig()
+ 123          {
+ 124   1        char TextBuffer[17];
+ 125   1        unsigned char Ptr=0;
+ 126   1      
+ 127   1        
+ 128   1        TextBuffer[Ptr++] = 'S'; //"StMod:x Telco:xx"
+ 129   1        TextBuffer[Ptr++] = 't'; //"StMod:xx Telco:x"
+ 130   1        TextBuffer[Ptr++] = 'M';
+ 131   1        TextBuffer[Ptr++] = 'o';
+ 132   1        TextBuffer[Ptr++] = 'd';
+ 133   1        TextBuffer[Ptr++] = ':';
+ 134   1        if ((NrOfTriples/10)!=0)
+ 135   1        {
+ 136   2          TextBuffer[Ptr++] = 0x30+(NrOfTriples/10);
+ 137   2        }
+ 138   1      
+ 139   1        TextBuffer[Ptr++] = 0x30+(NrOfTriples%10);
+ 140   1        TextBuffer[Ptr++] = ' ';
+ 141   1        TextBuffer[Ptr++] = 'T';
+ 142   1        TextBuffer[Ptr++] = 'e';
+ 143   1        TextBuffer[Ptr++] = 'l';
+ 144   1        TextBuffer[Ptr++] = 'c';
+ 145   1        TextBuffer[Ptr++] = 'o';
+ 146   1        TextBuffer[Ptr++] = ':';
+ 147   1        if ((NrOfTelcos/10)!=0)
+ 148   1        {
+ 149   2          TextBuffer[Ptr++] = 0x30+(NrOfTelcos/10);
+ 150   2        }
+ 151   1      //  else
+ 152   1      //  {
+ 153   1      //    TextBuffer[Ptr++] = ' ';
+ 154   1      //  }
+ 155   1        TextBuffer[Ptr++] = 0x30+(NrOfTelcos%10);
+ 156   1        TextBuffer[Ptr++] = 0;
+ 157   1        SetLCD(0,"\xC0");
+ 158   1        SetLCD(1,TextBuffer);
+ 159   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1040    ----
+   CONSTANT SIZE    =      2    ----
+   XDATA SIZE       =      1      22
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,10 @@
+".\Objects\airlabbrm-willem.obj",
+".\Objects\Delay.obj",
+".\Objects\I2C.obj",
+".\Objects\LCD.obj",
+".\Objects\ReadModules.obj",
+".\Objects\RS232.obj",
+".\Objects\ConsoleTimer.obj",
+".\Objects\Events.obj" 
+TO ".\Objects\Airlab-80c552" 
+PRINT(".\Listings\Airlab-80c552.m51") RAMSIZE(256) 
