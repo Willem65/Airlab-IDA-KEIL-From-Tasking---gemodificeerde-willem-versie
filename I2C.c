@@ -284,7 +284,7 @@ void ReadData(unsigned char I2CAddress, unsigned int StartAddress, unsigned char
 void WriteData(unsigned char I2CAddress, unsigned int StartAddress, unsigned char *Buffer, unsigned char NrOfBytes)
 {
 	unsigned char cntByte = 0;
-	unsigned char Address = I2CAddress | ((StartAddress>>7)&0x0E);
+	unsigned char Address = I2CAddress | ((StartAddress>>7)&0x0E);    // Device adres en StartAdres samen gevoegd ( groter adres bereik )
 
 	while (cntByte<NrOfBytes)
 	{
@@ -293,9 +293,9 @@ void WriteData(unsigned char I2CAddress, unsigned int StartAddress, unsigned cha
 		T3 = 0;
 
 		I2CAddressBufferOut[I2CBufferOutPtrTop] = Address;
-		I2CDataBufferOut[I2CBufferOutPtrTop++] = StartAddress&0xFF;
+		I2CDataBufferOut[I2CBufferOutPtrTop++] = StartAddress&0xFF;   // Pak alleen de rechter byte
 	 	I2CAddressBufferOut[I2CBufferOutPtrTop] = Address;
-	  I2CDataBufferOut[I2CBufferOutPtrTop++] = Buffer[cntByte];
+	    I2CDataBufferOut[I2CBufferOutPtrTop++] = Buffer[cntByte];
 		StartAddress++;
 		cntByte++;
 
@@ -307,16 +307,17 @@ void WriteData(unsigned char I2CAddress, unsigned int StartAddress, unsigned cha
 			cntByte++;
 		}
 
-		EA = 0;
-	  if ((I2CBufferOutPtrTop != I2CBufferOutPtrBottom) && I2CSendReady)
+		EA = 0;                      // 8051 Global Interrupt
+		
+	    if ((I2CBufferOutPtrTop != I2CBufferOutPtrBottom) && I2CSendReady)  // Wat gebeurd hier ? ( oke als ze ongelijk zijn )
 		{
 			I2CSendReady=0;
-			EA = 1;
-			STA = 1;
+			EA = 1;                  // 8051 Global Interrupt
+			STA = 1;                 // Generate Start or Repeated start
 		}
-		EA = 1;
+		EA = 1;                      // 8051 Global Interrupt
 
-		while (!I2CSendReady);
+		while (!I2CSendReady);       // Wacht op hardware = Ready
 
 		Address = I2CAddress | ((StartAddress>>7)&0x0E);
 
